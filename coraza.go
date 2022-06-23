@@ -145,8 +145,7 @@ func (cw corazaWaf) ProcessRecord(record io.Reader) (sc *scores, err error) {
 				body = true
 			}
 
-			if h := strings.ToLower(string(chunk)); !body &&
-				(strings.HasPrefix(h, "transfer-encoding:") || strings.HasPrefix(h, "content-encoding:")) {
+			if h := strings.ToLower(string(chunk)); !body && strings.HasPrefix(h, "transfer-encoding:") {
 				continue
 			}
 
