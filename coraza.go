@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -111,53 +110,8 @@ func (cw corazaWaf) ProcessRecord(record io.Reader) (sc *scores, err error) {
 		reader.ReadByte()
 	}
 
-	// remove content-encoding && transfer-encoding
-	scanner := bufio.NewScanner(reader)
-	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
-			return 0, nil, nil
-		}
-
-		// default max header line 16kb
-		if len(data) > 16384 {
-			return len(data), data, nil
-		}
-
-		if i := bytes.IndexByte(data, '\n'); i >= 1 && data[i-1] == '\r' {
-			return i + 1, data[:i+1], nil
-		}
-
-		if atEOF {
-			return len(data), data, nil
-		}
-
-		return 0, nil, nil
-	})
-
-	resr, resw := io.Pipe()
-	go func() {
-		defer resw.Close()
-
-		body := false
-		for scanner.Scan() {
-			chunk := scanner.Bytes()
-			if len(chunk) == 2 && chunk[0] == '\r' && chunk[1] == '\n' {
-				body = true
-			}
-
-			if h := strings.ToLower(string(chunk)); !body && strings.HasPrefix(h, "transfer-encoding:") {
-				continue
-			}
-
-			if _, err := resw.Write(chunk); err != nil {
-				log.Printf("error filtering raw response data : %v", err)
-				return
-			}
-		}
-	}()
-
 	// response
-	res, err := http.ReadResponse(bufio.NewReader(resr), req)
+	res, err := http.ReadResponse(reader, req)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response: %w", err)
 	}
