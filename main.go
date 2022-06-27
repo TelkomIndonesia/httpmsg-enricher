@@ -56,6 +56,7 @@ func main() {
 			c.String(500, err.Error())
 			return
 		}
+		defer f.Close()
 
 		score, err := waf.ProcessRecord(f)
 		if err != nil {
