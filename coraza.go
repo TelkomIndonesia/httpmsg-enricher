@@ -12,7 +12,7 @@ import (
 )
 
 type corazaWaf struct {
-	*coraza.Waf
+	waf *coraza.Waf
 }
 
 func newCorazaWaf() (cw corazaWaf, err error) {
@@ -50,7 +50,7 @@ func (lb *truncatedBuffer) Write(p []byte) (n int, err error) {
 }
 
 func (cw corazaWaf) ProcessRecord(record io.Reader) (sc *scores, err error) {
-	tx := cw.NewTransaction()
+	tx := cw.waf.NewTransaction()
 	defer func() {
 		tx.ProcessLogging()
 		tx.Clean()
@@ -59,7 +59,7 @@ func (cw corazaWaf) ProcessRecord(record io.Reader) (sc *scores, err error) {
 	msg := newHTTPRecordedMessage(record)
 
 	// request
-	req, err := msg.getRequest()
+	req, err := msg.Request()
 	if err != nil {
 		return nil, fmt.Errorf("error parsing request: %w", err)
 	}
@@ -103,7 +103,7 @@ func (cw corazaWaf) ProcessRecord(record io.Reader) (sc *scores, err error) {
 	}
 
 	// response
-	res, err := msg.getResponse()
+	res, err := msg.Response()
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response: %w", err)
 	}

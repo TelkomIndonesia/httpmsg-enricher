@@ -12,12 +12,14 @@ import (
 const recordBoundaryHeader = "x-record-boundary"
 const maxHeaderLine = 16384
 
+var crlf = []byte{'\r', '\n'}
+
 func readCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
 	}
 
-	if i := bytes.Index(data, []byte{'\r', '\n'}); i >= 0 {
+	if i := bytes.Index(data, crlf); i >= 0 {
 		return i + 2, data[:i+2], nil
 	}
 
@@ -58,19 +60,19 @@ func newHTTPRecordedMessage(r io.Reader) *httpRecordedMessage {
 		scannerWritter: w,
 		record:         r,
 	}
-	go hrm.scan()
+	go hrm.feed()
 
 	return hrm
 }
 
-func (hrm *httpRecordedMessage) scan() {
+func (hrm *httpRecordedMessage) feed() {
 	var chunkedBody []byte
-	reqBoundary, reqBodyFound := "", false
+	reqBoundary, reqBodyReading := "", false
 
 	for hrm.scanner.Scan() {
 		data := hrm.scanner.Bytes()
 
-		if reqBoundary != "" && reqBodyFound {
+		if reqBoundary != "" && reqBodyReading {
 			eof := false
 			if string(data) == reqBoundary {
 				chunkedBody = chunkedBody[:len(chunkedBody)-2] // remove '\r\n'
@@ -79,23 +81,23 @@ func (hrm *httpRecordedMessage) scan() {
 
 			if chunkedBody != nil {
 				hrm.scannerWritter.Write([]byte(strconv.FormatInt(int64(len(chunkedBody)), 16)))
-				hrm.scannerWritter.Write([]byte{'\r', '\n'})
+				hrm.scannerWritter.Write(crlf)
 				hrm.scannerWritter.Write(chunkedBody)
-				hrm.scannerWritter.Write([]byte{'\r', '\n'})
+				hrm.scannerWritter.Write(crlf)
 			}
 
 			if eof {
 				hrm.scannerWritter.Write([]byte{'0', '\r', '\n', '\r', '\n'})
-				reqBoundary, reqBodyFound = "", false
+				reqBoundary, reqBodyReading = "", false
 			} else {
 				chunkedBody = data
 			}
 			continue
 		}
 
-		if reqBoundary != "" && string(data) == "\r\n" {
+		if reqBoundary != "" && bytes.Compare(data, crlf) == 0 {
 			hrm.scannerWritter.Write([]byte("Transfer-Encoding: chunked\r\n"))
-			reqBodyFound = true
+			reqBodyReading = true
 		}
 
 		if hrm.req == nil && strings.ToLower(string(data[0:len(recordBoundaryHeader)+1])) == recordBoundaryHeader+":" {
@@ -112,7 +114,7 @@ func (hrm *httpRecordedMessage) scan() {
 	hrm.scannerWritter.Close()
 }
 
-func (hrm *httpRecordedMessage) getRequest() (req *http.Request, err error) {
+func (hrm *httpRecordedMessage) Request() (req *http.Request, err error) {
 	if hrm.req != nil {
 		return hrm.req, nil
 	}
@@ -124,13 +126,13 @@ func (hrm *httpRecordedMessage) getRequest() (req *http.Request, err error) {
 	return hrm.req, err
 }
 
-func (hrm *httpRecordedMessage) getResponse() (res *http.Response, err error) {
+func (hrm *httpRecordedMessage) Response() (res *http.Response, err error) {
 	if hrm.res != nil {
 		return hrm.res, nil
 	}
 
 	if hrm.req == nil {
-		if _, err = hrm.getRequest(); err != nil {
+		if _, err = hrm.Request(); err != nil {
 			return
 		}
 	}

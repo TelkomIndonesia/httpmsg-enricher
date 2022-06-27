@@ -57,14 +57,14 @@ func TestRecordedMessage(t *testing.T) {
 	require.Nil(t, err, "unexpected error in reading test data")
 
 	h := newHTTPRecordedMessage(bytes.NewReader(f))
-	req, err := h.getRequest()
+	req, err := h.Request()
 	require.Nil(t, err, "should not return error")
 	require.NotNil(t, req, "should not return nil request")
 	b, err := ioutil.ReadAll(req.Body)
 	require.Nil(t, err, "req body should be readable")
 	t.Log(string(b))
 
-	res, err := h.getResponse()
+	res, err := h.Response()
 	require.Nil(t, err, "should not return error")
 	require.NotNil(t, res, "should not return nil response")
 	b, err = ioutil.ReadAll(res.Body)
