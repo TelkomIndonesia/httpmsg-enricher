@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -12,44 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gin-gonic/gin"
 )
-
-func scanS3(waf corazaWaf) {
-	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials("etchpass", "2NLqyX5f=-Io=oiVw0D-", ""),
-		Endpoint:         aws.String("https://minio.etchpass.dev"),
-		Region:           aws.String("us-east-1"),
-		S3ForcePathStyle: aws.Bool(true),
-	}
-	session := session.New(s3Config)
-	s3Client := s3.New(session)
-	err := s3Client.ListObjectsV2Pages(&s3.ListObjectsV2Input{Bucket: aws.String("logs")}, func(lovo *s3.ListObjectsV2Output, b bool) bool {
-		for _, item := range lovo.Contents {
-			func() {
-				getInput := &s3.GetObjectInput{
-					Bucket: aws.String("logs"),
-					Key:    aws.String(*item.Key),
-				}
-				resp, err := s3Client.GetObject(getInput)
-				if err != nil {
-					log.Fatal(err)
-				}
-				defer resp.Body.Close()
-
-				score, err := waf.ProcessRecord(resp.Body)
-				json.NewEncoder(os.Stdout).Encode(map[string]interface{}{
-					"object": *item.Key,
-					"score":  score,
-					"error":  err,
-				})
-			}()
-		}
-		return true
-	})
-
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
 func main() {
 	waf, err := newCorazaWaf()

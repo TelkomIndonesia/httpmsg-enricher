@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"io"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -58,10 +56,10 @@ func (cw corazaWaf) ProcessRecord(record io.Reader) (sc *scores, err error) {
 		tx.Clean()
 	}()
 
-	reader := bufio.NewReader(record)
+	msg := newHTTPRecordedMessage(record)
 
 	// request
-	req, err := http.ReadRequest(reader)
+	req, err := msg.getRequest()
 	if err != nil {
 		return nil, fmt.Errorf("error parsing request: %w", err)
 	}
@@ -104,14 +102,8 @@ func (cw corazaWaf) ProcessRecord(record io.Reader) (sc *scores, err error) {
 		return nil, fmt.Errorf("error processing request: %w", err)
 	}
 
-	// skip any CRLF
-	for b, err := reader.Peek(2); err == nil && b[0] == '\r' && b[1] == '\n'; b, err = reader.Peek(2) {
-		reader.ReadByte()
-		reader.ReadByte()
-	}
-
 	// response
-	res, err := http.ReadResponse(reader, req)
+	res, err := msg.getResponse()
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response: %w", err)
 	}
