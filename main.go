@@ -13,11 +13,6 @@ import (
 )
 
 func main() {
-	waf, err := newCorazaWaf()
-	if err != nil {
-		log.Fatalf("error initializing waf: %v", err)
-	}
-
 	s3Config := &aws.Config{
 		Credentials:      credentials.NewStaticCredentials("etchpass", "2NLqyX5f=-Io=oiVw0D-", ""),
 		Endpoint:         aws.String("https://minio.etchpass.dev"),
@@ -25,6 +20,11 @@ func main() {
 		S3ForcePathStyle: aws.Bool(true),
 	}
 	s3Client := s3.New(session.New(s3Config))
+
+	erc, err := newEnricher()
+	if err != nil {
+		log.Fatalf("error initializing waf: %v", err)
+	}
 
 	r := gin.Default()
 	r.UseRawPath = true
@@ -41,7 +41,7 @@ func main() {
 		}
 		defer resp.Body.Close()
 
-		score, err := waf.ProcessRecord(resp.Body)
+		score, err := erc.ProcessRecord(resp.Body)
 		if err != nil {
 			c.String(500, err.Error())
 			return
@@ -58,7 +58,7 @@ func main() {
 		}
 		defer f.Close()
 
-		score, err := waf.ProcessRecord(f)
+		score, err := erc.ProcessRecord(f)
 		if err != nil {
 			c.String(500, err.Error())
 			return

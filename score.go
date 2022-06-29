@@ -40,7 +40,7 @@ type scores struct {
 	SqlErrorMatch int `json:"sql_error_match"`
 }
 
-func newScore(tx *coraza.Transaction) (s *scores) {
+func newScores(tx *coraza.Transaction) (s *scores) {
 	txData := tx.GetCollection(variables.TX)
 	s = &scores{
 		Base: baseScores{

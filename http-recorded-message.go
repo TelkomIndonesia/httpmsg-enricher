@@ -66,9 +66,10 @@ func newHTTPRecordedMessage(r io.Reader) *httpRecordedMessage {
 }
 
 func (hrm *httpRecordedMessage) feed() {
+	defer hrm.scannerWritter.Close()
+
 	var chunkedBody []byte
 	reqBoundary, reqBodyReading := "", false
-
 	for hrm.scanner.Scan() {
 		data := hrm.scanner.Bytes()
 
@@ -111,7 +112,6 @@ func (hrm *httpRecordedMessage) feed() {
 
 		hrm.scannerWritter.Write(data)
 	}
-	hrm.scannerWritter.Close()
 }
 
 func (hrm *httpRecordedMessage) Request() (req *http.Request, err error) {
@@ -132,7 +132,8 @@ func (hrm *httpRecordedMessage) Response() (res *http.Response, err error) {
 	}
 
 	if hrm.req == nil {
-		if _, err = hrm.Request(); err != nil {
+		_, err = hrm.Request()
+		if err != nil {
 			return
 		}
 	}
@@ -141,7 +142,7 @@ func (hrm *httpRecordedMessage) Response() (res *http.Response, err error) {
 	}
 
 	reader := bufio.NewReader(hrm.record)
-	for b, err := reader.Peek(2); err == nil && b[0] == '\r' && b[1] == '\n'; b, err = reader.Peek(2) {
+	for b, err := reader.Peek(2); err == nil && bytes.Compare(b, crlf) == 0; b, err = reader.Peek(2) {
 		reader.ReadByte()
 		reader.ReadByte()
 	}
