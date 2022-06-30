@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -16,7 +17,11 @@ func TestScorer(t *testing.T) {
 	f, err := os.ReadFile("testdata/record.txt")
 	require.Nil(t, err, "unexpected error in reading test data")
 
-	s, err := sc.ProcessRecord(bytes.NewReader(f))
+	s, err := sc.EnrichRecord(bytes.NewReader(f))
+	defer s.Close()
 	assert.NoError(t, err, "should not return error")
 	assert.NotNil(t, s, "should produce non nil score")
+	ecs, _ := s.toECS()
+	b, _ := json.Marshal(ecs)
+	t.Log(string(b))
 }

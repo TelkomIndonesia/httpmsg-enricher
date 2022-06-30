@@ -3,12 +3,12 @@ package main
 import "bytes"
 
 type truncatedBuffer struct {
-	buff  bytes.Buffer
-	limit int64
-	n     int64
+	buff   bytes.Buffer
+	limit  int
+	oriLen int
 }
 
-func newTruncatedBuffer(limit int64) *truncatedBuffer {
+func newTruncatedBuffer(limit int) *truncatedBuffer {
 	return &truncatedBuffer{limit: limit}
 }
 
@@ -17,23 +17,24 @@ func (lb *truncatedBuffer) Read(p []byte) (n int, err error) {
 }
 
 func (lb *truncatedBuffer) Write(p []byte) (n int, err error) {
-	if lb.limit <= 0 {
-		lb.n++
+	curlen := lb.buff.Len()
+	if curlen >= lb.limit {
+		lb.oriLen += len(p)
 		return len(p), nil
 	}
 
 	l := len(p)
-	if lb.limit < int64(l) {
-		l = int(lb.limit)
+	if left := lb.limit - curlen; left < l {
+		l = left
 	}
 	n, err = lb.buff.Write(p[:l])
 	if err != nil {
 		return n, err
 	}
-	lb.limit -= int64(n)
-	lb.n += int64(len(p) - (l - n))
 
-	return len(p) - (l - n), nil
+	n = len(p) - (l - n)
+	lb.oriLen += n
+	return n, nil
 }
 
 func (lb *truncatedBuffer) String() string {
@@ -44,6 +45,6 @@ func (lb *truncatedBuffer) Close() error {
 	return nil
 }
 
-func (lb *truncatedBuffer) Len() int64 {
-	return lb.n
+func (lb *truncatedBuffer) Len() int {
+	return lb.oriLen
 }

@@ -5,9 +5,9 @@ type HTTPMessageBody struct {
 	Content string `json:"content,omitempty"`
 }
 type HTTPMessage struct {
-	Bytes    int64           `json:"bytes,omitempty"`
-	MimeType string          `json:"mime_type,omitempty"`
-	Body     HTTPMessageBody `json:"body,omitempty"`
+	Bytes    int64            `json:"bytes,omitempty"`
+	MimeType string           `json:"mime_type,omitempty"`
+	Body     *HTTPMessageBody `json:"body,omitempty"`
 }
 type HTTPRequest struct {
 	HTTPMessage
@@ -22,7 +22,7 @@ type HTTPResponse struct {
 	StatusCode int `json:"status_code,omitmepty"`
 }
 type HTTP struct {
-	Version  string       `json:"version,omitempty"`
-	Request  HTTPRequest  `json:"request,omitempty"`
-	Response HTTPResponse `json:"response,omitempty"`
+	Version  string        `json:"version,omitempty"`
+	Request  *HTTPRequest  `json:"request,omitempty"`
+	Response *HTTPResponse `json:"response,omitempty"`
 }

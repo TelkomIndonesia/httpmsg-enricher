@@ -41,7 +41,7 @@ func main() {
 		}
 		defer resp.Body.Close()
 
-		score, err := erc.ProcessRecord(resp.Body)
+		score, err := erc.EnrichRecord(resp.Body)
 		if err != nil {
 			c.String(500, err.Error())
 			return
@@ -58,7 +58,7 @@ func main() {
 		}
 		defer f.Close()
 
-		score, err := erc.ProcessRecord(f)
+		score, err := erc.EnrichRecord(f)
 		if err != nil {
 			c.String(500, err.Error())
 			return
