@@ -68,6 +68,7 @@ func (etx *enricherTransaction) processRequest() (err error) {
 			return
 		}
 		etx.reqMime = mtype.String()
+		io.Copy(io.Discard, mimer)
 	}()
 	mw := io.MultiWriter(etx.reqBody, mimew, tx.RequestBodyBuffer)
 	if _, err = io.Copy(mw, req.Body); err != nil {
@@ -76,7 +77,6 @@ func (etx *enricherTransaction) processRequest() (err error) {
 	if _, err := tx.ProcessRequestBody(); err != nil {
 		return fmt.Errorf("error processing request: %w", err)
 	}
-	mimew.Close()
 
 	req.Body = etx.reqBody
 	return
@@ -105,6 +105,7 @@ func (etx *enricherTransaction) processResponse() (err error) {
 			return
 		}
 		etx.resMime = mtype.String()
+		io.Copy(io.Discard, mimer)
 	}()
 	mw := io.MultiWriter(etx.resBody, mimew, tx.ResponseBodyBuffer)
 	if _, err := io.Copy(mw, res.Body); err != nil || !tx.IsProcessableResponseBody() {

@@ -6,22 +6,30 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestScorer(t *testing.T) {
-	sc, err := newEnricher()
-	require.Nil(t, err, "unexpected error in instantiating scorer")
+func TestEnricher(t *testing.T) {
+	table := []struct {
+		file string
+	}{
+		{file: "testdata/record.txt"},
+		{file: "testdata/record2.txt"},
+	}
 
-	f, err := os.ReadFile("testdata/record.txt")
-	require.Nil(t, err, "unexpected error in reading test data")
+	for _, tt := range table {
+		sc, err := newEnricher()
+		require.Nil(t, err, "unexpected error in instantiating scorer")
 
-	s, err := sc.EnrichRecord(bytes.NewReader(f))
-	defer s.Close()
-	assert.NoError(t, err, "should not return error")
-	assert.NotNil(t, s, "should produce non nil score")
-	ecs, _ := s.toECS()
-	b, _ := json.Marshal(ecs)
-	t.Log(string(b))
+		f, err := os.ReadFile(tt.file)
+		require.Nil(t, err, "unexpected error in reading test data")
+
+		s, err := sc.EnrichRecord(bytes.NewReader(f))
+		require.NoError(t, err, "should not return error")
+		require.NotNil(t, s, "should produce non nil score")
+		defer s.Close()
+		ecs, _ := s.toECS()
+		b, _ := json.Marshal(ecs)
+		t.Log(string(b))
+	}
 }

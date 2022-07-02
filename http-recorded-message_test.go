@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -34,8 +35,8 @@ func TestReadCRLF(t *testing.T) {
 			exp:   []string{"asda\nsd\rsdasd\r\n", "asdasadasdasdas\r\n", "da"},
 		},
 		{
-			input: longstr + "\r\n" + recordBoundaryHeader + ": value\r\n",
-			exp:   []string{longstr + "\r\n", recordBoundaryHeader + ": value\r\n"},
+			input: longstr + "\r\nkey: value\r\n",
+			exp:   []string{longstr + "\r\n", "key: value\r\n"},
 		},
 	}
 
@@ -53,21 +54,39 @@ func TestReadCRLF(t *testing.T) {
 }
 
 func TestRecordedMessage(t *testing.T) {
-	f, err := os.ReadFile("testdata/record.txt")
-	require.Nil(t, err, "unexpected error in reading test data")
+	table := []struct {
+		file string
+	}{
+		{file: "testdata/record.txt"},
+		{file: "testdata/record2.txt"},
+	}
 
-	h := newHTTPRecordedMessage(bytes.NewReader(f))
-	req, err := h.Request()
-	require.Nil(t, err, "should not return error")
-	require.NotNil(t, req, "should not return nil request")
-	b, err := ioutil.ReadAll(req.Body)
-	require.Nil(t, err, "req body should be readable")
-	t.Log(string(b))
+	for _, tt := range table {
 
-	res, err := h.Response()
-	require.Nil(t, err, "should not return error")
-	require.NotNil(t, res, "should not return nil response")
-	b, err = ioutil.ReadAll(res.Body)
-	require.Nil(t, err, "res body should be readable")
-	t.Log(string(b))
+		f, err := os.ReadFile(tt.file)
+		require.Nil(t, err, "unexpected error in reading test data")
+
+		h := newHTTPRecordedMessage(bytes.NewReader(f))
+		req, err := h.Request()
+		require.Nil(t, err, "should not return error")
+		require.NotNil(t, req, "should not return nil request")
+		b, err := ioutil.ReadAll(req.Body)
+		require.Nil(t, err, "req body should be readable")
+		t.Log(string(b))
+
+		res, err := h.Response()
+		require.Nil(t, err, "should not return error")
+		require.NotNil(t, res, "should not return nil response")
+		b, err = ioutil.ReadAll(res.Body)
+		require.Nil(t, err, "res body should be readable")
+		t.Log(string(b))
+
+		ctx, err := h.Context()
+		require.Nil(t, err, "should not return error")
+		require.NotNil(t, ctx, "should not return nil context")
+		b, err = json.Marshal(ctx)
+		require.Nil(t, err, "res body should be marshallable")
+		t.Log(string(b))
+	}
+
 }
