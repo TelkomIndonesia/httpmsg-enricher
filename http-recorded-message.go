@@ -40,43 +40,30 @@ func skipLeadingCRLF(r *bufio.Reader) *bufio.Reader {
 	return r
 }
 
-type startEnd struct {
+type httpRecordedMessageContextDuration struct {
 	Start time.Time  `json:"start"`
 	End   *time.Time `json:"end"`
 }
-type httpRecordedMessageContextDuration struct {
-	Proxy *startEnd `json:"proxy"`
-	Total startEnd  `json:"total"`
+type httpRecordedMessageContextDurations struct {
+	Proxy *httpRecordedMessageContextDuration `json:"proxy"`
+	Total httpRecordedMessageContextDuration  `json:"total"`
 }
 type httpRecordedMessageContextCredential struct {
 	Username    string `json:"username"`
-	PublicKey   string `json:"publicKey"`
+	PublicKey   string `json:"public_key"`
 	Fingerprint string `json:"fingerprint"`
 }
 type httpRecordedMessageContextDomain struct {
 	Name   string `json:"name"`
 	Target string `json:"target"`
 }
-
 type httpRecordedMessageContext struct {
 	ID string `json:"id"`
 
-	Duration   httpRecordedMessageContextDuration   `json:"duration"`
+	Durations  httpRecordedMessageContextDurations  `json:"durations"`
 	Credential httpRecordedMessageContextCredential `json:"credential"`
 	Domain     httpRecordedMessageContextDomain     `json:"domain"`
 }
-
-type readcloserRecorded struct {
-	io.ReadCloser
-
-	closed bool
-}
-
-func (rc *readcloserRecorded) Close() error {
-	rc.closed = true
-	return rc.ReadCloser.Close()
-}
-
 type httpRecordedMessage struct {
 	scanner        bufio.Scanner
 	scannerWritter *io.PipeWriter
@@ -103,11 +90,6 @@ func newHTTPRecordedMessage(r io.Reader) *httpRecordedMessage {
 func (hrm *httpRecordedMessage) feed() {
 	defer hrm.scannerWritter.Close()
 
-	var eofLine []byte
-	var body []byte
-	bodyReading := false
-	chunked := false
-
 	skipEmpty := func() []byte {
 		for hrm.scanner.Scan() {
 			data := hrm.scanner.Bytes()
@@ -120,6 +102,10 @@ func (hrm *httpRecordedMessage) feed() {
 	}
 
 	writeBody := func(body []byte, chunked bool) (n int, err error) {
+		if body == nil {
+			return
+		}
+
 		if !chunked {
 			return hrm.scannerWritter.Write(body)
 		}
@@ -135,6 +121,8 @@ func (hrm *httpRecordedMessage) feed() {
 		return
 	}
 
+	var body, eofLine []byte
+	bodyReading, chunked := false, false
 	hrm.scanner.Split(readCRLF)
 	for hrm.scanner.Scan() {
 		data := hrm.scanner.Bytes()
@@ -146,14 +134,12 @@ func (hrm *httpRecordedMessage) feed() {
 
 		if bodyReading {
 			eof := false
-			if bytes.Compare(data, eofLine) == 0 {
+			if bytes.Compare(data, eofLine) == 0 && bytes.Compare(body[len(body)-2:], crlf) == 0 {
 				body = body[:len(body)-2] // remove '\r\n'
 				eof = true
 			}
 
-			if body != nil {
-				writeBody(body, chunked)
-			}
+			writeBody(body, chunked)
 
 			if !eof {
 				body = data
@@ -167,10 +153,6 @@ func (hrm *httpRecordedMessage) feed() {
 			data = skipEmpty()
 		}
 
-		if !bodyReading && bytes.Compare(data, crlf) == 0 {
-			bodyReading = true
-		}
-
 		if h := string(data[:len(transferEncodingHeader)+1]); strings.EqualFold(transferEncodingHeader+":", h) {
 			hv := string(data[len(transferEncodingHeader)+1:])
 			for _, v := range strings.Split(hv, ",") {
@@ -179,6 +161,9 @@ func (hrm *httpRecordedMessage) feed() {
 					break
 				}
 			}
+
+		} else if bytes.Compare(data, crlf) == 0 {
+			bodyReading = true
 		}
 
 		hrm.scannerWritter.Write(data)
