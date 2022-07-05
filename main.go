@@ -13,23 +13,29 @@ import (
 )
 
 func main() {
+	cfg, err := newConfig()
+	if err != nil {
+		log.Fatalf("error loading config: %v", err)
+	}
+	log.Print(cfg)
+
 	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials("etchpass", "2NLqyX5f=-Io=oiVw0D-", ""),
-		Endpoint:         aws.String("https://minio.etchpass.dev"),
-		Region:           aws.String("us-east-1"),
-		S3ForcePathStyle: aws.Bool(true),
+		Credentials:      credentials.NewStaticCredentials(cfg.S3.Credentials.KeyID, cfg.S3.Credentials.SecretKey, ""),
+		Endpoint:         aws.String(cfg.S3.Endpoint),
+		Region:           aws.String(cfg.S3.Region),
+		S3ForcePathStyle: aws.Bool(cfg.S3.ForcePathStyle),
 	}
 	s3Client := s3.New(session.New(s3Config))
 
 	erc, err := newEnricher()
 	if err != nil {
-		log.Fatalf("error initializing waf: %v", err)
+		log.Fatalf("error initializing enricher: %v", err)
 	}
 
 	r := gin.Default()
 	r.UseRawPath = true
 	r.UnescapePathValues = true
-	r.GET("/records/s3/:object_key", func(c *gin.Context) {
+	r.GET("/ecs/s3/:object_key", func(c *gin.Context) {
 		getInput := &s3.GetObjectInput{
 			Bucket: aws.String("logs"),
 			Key:    aws.String(c.Param("object_key")),
@@ -50,7 +56,7 @@ func main() {
 		c.JSON(http.StatusOK, score)
 	})
 
-	r.GET("/records/files/:filename", func(c *gin.Context) {
+	r.GET("/ecs/files/:filename", func(c *gin.Context) {
 		f, err := os.Open(c.Param("filename"))
 		if err != nil {
 			c.String(500, err.Error())

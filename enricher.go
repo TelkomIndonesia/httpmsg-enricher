@@ -13,7 +13,7 @@ import (
 	"github.com/telkomindonesia/crs-offline/ecs"
 )
 
-type enricherTransaction struct {
+type enrichment struct {
 	tx  *coraza.Transaction
 	msg *httpRecordedMessage
 
@@ -23,7 +23,21 @@ type enricherTransaction struct {
 	resBody *truncatedBuffer
 }
 
-func (etx *enricherTransaction) processRequest() (err error) {
+func detectMime(target *string, reader io.Reader) {
+	if target == nil || reader == nil {
+		return
+	}
+
+	mtype, err := mimetype.DetectReader(reader)
+	if err != nil {
+		return
+	}
+	*target = mtype.String()
+
+	io.Copy(io.Discard, reader)
+}
+
+func (etx *enrichment) processRequest() (err error) {
 	tx := etx.tx
 	req, err := etx.msg.Request()
 	if err != nil {
@@ -60,17 +74,10 @@ func (etx *enricherTransaction) processRequest() (err error) {
 
 	// process body
 	etx.reqBody = newTruncatedBuffer(int(tx.RequestBodyLimit))
-	mimer, mimew := io.Pipe()
-	defer mimew.Close()
-	go func() {
-		mtype, err := mimetype.DetectReader(mimer)
-		if err != nil {
-			return
-		}
-		etx.reqMime = mtype.String()
-		io.Copy(io.Discard, mimer)
-	}()
-	mw := io.MultiWriter(etx.reqBody, mimew, tx.RequestBodyBuffer)
+	mimeR, mimeW := io.Pipe()
+	defer mimeW.Close()
+	go detectMime(&etx.reqMime, mimeR)
+	mw := io.MultiWriter(etx.reqBody, mimeW, tx.RequestBodyBuffer)
 	if _, err = io.Copy(mw, req.Body); err != nil {
 		return fmt.Errorf("error copying request bode: %w", err)
 	}
@@ -78,11 +85,10 @@ func (etx *enricherTransaction) processRequest() (err error) {
 		return fmt.Errorf("error processing request: %w", err)
 	}
 
-	req.Body = etx.reqBody
 	return
 }
 
-func (etx *enricherTransaction) processResponse() (err error) {
+func (etx *enrichment) processResponse() (err error) {
 	tx := etx.tx
 	res, err := etx.msg.Response()
 	if err != nil {
@@ -97,46 +103,46 @@ func (etx *enricherTransaction) processResponse() (err error) {
 
 	// response body
 	etx.resBody = newTruncatedBuffer(int(tx.RequestBodyLimit))
-	mimer, mimew := io.Pipe()
-	defer mimew.Close()
-	go func() {
-		mtype, err := mimetype.DetectReader(mimer)
-		if err != nil {
-			return
-		}
-		etx.resMime = mtype.String()
-		io.Copy(io.Discard, mimer)
-	}()
-	mw := io.MultiWriter(etx.resBody, mimew, tx.ResponseBodyBuffer)
-	if _, err := io.Copy(mw, res.Body); err != nil || !tx.IsProcessableResponseBody() {
+	mimeR, mimeW := io.Pipe()
+	defer mimeW.Close()
+	go detectMime(&etx.resMime, mimeR)
+	mw := io.MultiWriter(etx.resBody, mimeW, tx.ResponseBodyBuffer)
+	if _, err := io.Copy(mw, res.Body); err != nil {
 		return fmt.Errorf("error copying response body: %w", err)
 	}
-
 	if _, err := tx.ProcessResponseBody(); err != nil {
 		return fmt.Errorf("error processing response body: %w", err)
 	}
-	res.Body = etx.resBody
 
 	return
 }
-func (etx *enricherTransaction) toScore() *scores {
+
+func (etx *enrichment) toScore() *scores {
 	return newScores(etx.tx)
 }
 
-func (etx *enricherTransaction) toECS() (doc *ecs.Document, err error) {
+func (etx *enrichment) toECS() (doc *ecs.Document, err error) {
 	tx, req, res := etx.tx, etx.msg.req, etx.msg.res
 	if req == nil || res == nil {
 		return nil, fmt.Errorf("Please invoke ProcessRequest() and ProcessResponse() first.")
 	}
+	ctx, err := etx.msg.Context()
+	if err != nil {
+		return nil, fmt.Errorf("error geting context: %w", err)
+	}
 
 	doc = &ecs.Document{
 		Base: ecs.Base{
-			Message: "recorded HTTP message",
+			Message:   "recorded HTTP message",
+			Timestamp: ctx.Durations.Proxy.Start,
+		},
+		ECS: ecs.ECS{
+			Version: "8.3.0",
 		},
 		HTTP: &ecs.HTTP{
 			Version: fmt.Sprintf("%d.%d", req.ProtoMajor, req.ProtoMinor),
 			Request: &ecs.HTTPRequest{
-				ID:       req.Header.Get("x-request-id"),
+				ID:       ctx.ID,
 				Method:   req.Method,
 				Referrer: req.Referer(),
 				HTTPMessage: ecs.HTTPMessage{
@@ -217,7 +223,7 @@ func (etx *enricherTransaction) toECS() (doc *ecs.Document, err error) {
 	return
 }
 
-func (etx enricherTransaction) Close() {
+func (etx enrichment) Close() {
 	etx.msg.req.Body.Close()
 	etx.msg.res.Body.Close()
 	etx.tx.ProcessLogging()
@@ -239,14 +245,14 @@ func newEnricher() (cw enricher, err error) {
 	return enricher{waf}, nil
 }
 
-func (er enricher) newTransaction(record io.Reader) *enricherTransaction {
-	return &enricherTransaction{
+func (er enricher) newTransaction(record io.Reader) *enrichment {
+	return &enrichment{
 		tx:  er.waf.NewTransaction(),
 		msg: newHTTPRecordedMessage(record),
 	}
 }
 
-func (er enricher) EnrichRecord(record io.Reader) (tx *enricherTransaction, err error) {
+func (er enricher) EnrichRecord(record io.Reader) (tx *enrichment, err error) {
 	tx = er.newTransaction(record)
 
 	err = tx.processRequest()

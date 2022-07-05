@@ -32,14 +32,6 @@ func readCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
-func skipLeadingCRLF(r *bufio.Reader) *bufio.Reader {
-	for b, err := r.Peek(2); err == nil && bytes.Compare(crlf, b) == 0; b, err = r.Peek(2) {
-		r.ReadByte()
-		r.ReadByte()
-	}
-	return r
-}
-
 type httpRecordedMessageContextDuration struct {
 	Start time.Time  `json:"start"`
 	End   *time.Time `json:"end"`
@@ -90,37 +82,6 @@ func newHTTPRecordedMessage(r io.Reader) *httpRecordedMessage {
 func (hrm *httpRecordedMessage) feed() {
 	defer hrm.scannerWritter.Close()
 
-	skipEmpty := func() []byte {
-		for hrm.scanner.Scan() {
-			data := hrm.scanner.Bytes()
-			if bytes.Compare(crlf, data) == 0 {
-				continue
-			}
-			return data
-		}
-		return nil
-	}
-
-	writeBody := func(body []byte, chunked bool) (n int, err error) {
-		if body == nil {
-			return
-		}
-
-		if !chunked {
-			return hrm.scannerWritter.Write(body)
-		}
-
-		size := []byte(strconv.FormatInt(int64(len(body)), 16))
-		for _, b := range [][]byte{size, crlf, body, crlf} {
-			i, err := hrm.scannerWritter.Write(b)
-			n += i
-			if err != nil {
-				return n, err
-			}
-		}
-		return
-	}
-
 	var body, eofLine []byte
 	bodyReading, chunked := false, false
 	hrm.scanner.Split(readCRLF)
@@ -129,7 +90,7 @@ func (hrm *httpRecordedMessage) feed() {
 
 		if eofLine == nil {
 			eofLine = []byte(string(data))
-			data = skipEmpty()
+			data = hrm.consumeEmpty()
 		}
 
 		if bodyReading {
@@ -139,7 +100,7 @@ func (hrm *httpRecordedMessage) feed() {
 				eof = true
 			}
 
-			writeBody(body, chunked)
+			hrm.feedBody(body, chunked)
 
 			if !eof {
 				body = data
@@ -150,17 +111,11 @@ func (hrm *httpRecordedMessage) feed() {
 				hrm.scannerWritter.Write([]byte{'0', '\r', '\n', '\r', '\n'})
 			}
 			body, chunked, bodyReading = nil, false, false
-			data = skipEmpty()
+			data = hrm.consumeEmpty()
 		}
 
-		if h := string(data[:len(transferEncodingHeader)+1]); strings.EqualFold(transferEncodingHeader+":", h) {
-			hv := string(data[len(transferEncodingHeader)+1:])
-			for _, v := range strings.Split(hv, ",") {
-				if strings.EqualFold("chunked", strings.TrimSpace(v)) {
-					chunked = true
-					break
-				}
-			}
+		if isChunked(data) {
+			chunked = true
 
 		} else if bytes.Compare(data, crlf) == 0 {
 			bodyReading = true
@@ -169,13 +124,59 @@ func (hrm *httpRecordedMessage) feed() {
 		hrm.scannerWritter.Write(data)
 	}
 }
+func (hrm *httpRecordedMessage) consumeEmpty() []byte {
+	for hrm.scanner.Scan() {
+		data := hrm.scanner.Bytes()
+		if bytes.Compare(crlf, data) == 0 {
+			continue
+		}
+		return data
+	}
+	return nil
+}
+
+func (hrm *httpRecordedMessage) feedBody(body []byte, chunked bool) (n int, err error) {
+	if body == nil {
+		return
+	}
+
+	if !chunked {
+		return hrm.scannerWritter.Write(body)
+	}
+
+	size := []byte(strconv.FormatInt(int64(len(body)), 16))
+	for _, b := range [][]byte{size, crlf, body, crlf} {
+		i, err := hrm.scannerWritter.Write(b)
+		n += i
+		if err != nil {
+			return n, err
+		}
+	}
+	return
+}
+
+func isChunked(headerline []byte) (chunked bool) {
+	l := len(transferEncodingHeader)
+
+	if h := string(headerline[:l+1]); !strings.EqualFold(transferEncodingHeader+":", h) {
+		return
+	}
+
+	v := string(headerline[l+1:])
+	for _, v := range strings.Split(v, ",") {
+		if strings.EqualFold("chunked", strings.TrimSpace(v)) {
+			return true
+		}
+	}
+	return
+}
 
 func (hrm *httpRecordedMessage) Request() (req *http.Request, err error) {
 	if hrm.req != nil {
 		return hrm.req, nil
 	}
 
-	r := skipLeadingCRLF(bufio.NewReader(hrm.record))
+	r := bufio.NewReader(hrm.record)
 	hrm.req, err = http.ReadRequest(r)
 	return hrm.req, err
 }
@@ -192,7 +193,7 @@ func (hrm *httpRecordedMessage) Response() (res *http.Response, err error) {
 	}
 	io.Copy(io.Discard, hrm.req.Body)
 
-	r := skipLeadingCRLF(bufio.NewReader(hrm.record))
+	r := bufio.NewReader(hrm.record)
 	hrm.res, err = http.ReadResponse(r, hrm.req)
 	return hrm.res, err
 }
@@ -209,7 +210,7 @@ func (hrm *httpRecordedMessage) Context() (ctx *httpRecordedMessageContext, err 
 	}
 	io.Copy(io.Discard, hrm.res.Body)
 
-	r := skipLeadingCRLF(bufio.NewReader(hrm.record))
+	r := bufio.NewReader(hrm.record)
 	err = json.NewDecoder(r).Decode(&hrm.ctx)
 	return hrm.ctx, nil
 }

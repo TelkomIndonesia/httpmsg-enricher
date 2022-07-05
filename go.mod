@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/aws/aws-sdk-go v1.44.38
+	github.com/caarlos0/env/v6 v6.9.3
 	github.com/corazawaf/coraza/v2 v2.0.0
 	github.com/gabriel-vasile/mimetype v1.4.0
 	github.com/gin-gonic/gin v1.8.1
