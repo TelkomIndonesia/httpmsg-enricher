@@ -171,17 +171,20 @@ func isChunked(headerline []byte) (chunked bool) {
 	return
 }
 
-func (hrm *httpRecordedMessage) Request() (req *http.Request, err error) {
+func (hrm *httpRecordedMessage) Request() (_ *http.Request, err error) {
 	if hrm.req != nil {
 		return hrm.req, nil
 	}
 
 	r := bufio.NewReader(hrm.record)
 	hrm.req, err = http.ReadRequest(r)
+	if len(hrm.req.TransferEncoding) > 0 {
+		hrm.req.Header.Add("transfer-encoding", strings.Join(hrm.req.TransferEncoding, ","))
+	}
 	return hrm.req, err
 }
 
-func (hrm *httpRecordedMessage) Response() (res *http.Response, err error) {
+func (hrm *httpRecordedMessage) Response() (_ *http.Response, err error) {
 	if hrm.res != nil {
 		return hrm.res, nil
 	}
@@ -195,6 +198,9 @@ func (hrm *httpRecordedMessage) Response() (res *http.Response, err error) {
 
 	r := bufio.NewReader(hrm.record)
 	hrm.res, err = http.ReadResponse(r, hrm.req)
+	if len(hrm.res.TransferEncoding) > 0 {
+		hrm.res.Header.Add("transfer-encoding", strings.Join(hrm.res.TransferEncoding, ","))
+	}
 	return hrm.res, err
 }
 

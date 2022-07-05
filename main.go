@@ -37,7 +37,7 @@ func main() {
 	r.UnescapePathValues = true
 	r.GET("/ecs/s3/:object_key", func(c *gin.Context) {
 		getInput := &s3.GetObjectInput{
-			Bucket: aws.String("logs"),
+			Bucket: aws.String(cfg.S3.Bucket),
 			Key:    aws.String(c.Param("object_key")),
 		}
 		resp, err := s3Client.GetObject(getInput)
@@ -47,13 +47,19 @@ func main() {
 		}
 		defer resp.Body.Close()
 
-		score, err := erc.EnrichRecord(resp.Body)
+		er, err := erc.EnrichRecord(resp.Body)
 		if err != nil {
 			c.String(500, err.Error())
 			return
 		}
+		defer er.Close()
 
-		c.JSON(http.StatusOK, score)
+		ecs, err := er.toECS()
+		if err != nil {
+			c.String(500, err.Error())
+			return
+		}
+		c.JSON(http.StatusOK, ecs)
 	})
 
 	r.GET("/ecs/files/:filename", func(c *gin.Context) {
@@ -64,13 +70,19 @@ func main() {
 		}
 		defer f.Close()
 
-		score, err := erc.EnrichRecord(f)
+		er, err := erc.EnrichRecord(f)
 		if err != nil {
 			c.String(500, err.Error())
 			return
 		}
+		defer er.Close()
 
-		c.JSON(http.StatusOK, score)
+		ecs, err := er.toECS()
+		if err != nil {
+			c.String(500, err.Error())
+			return
+		}
+		c.JSON(http.StatusOK, ecs)
 	})
 
 	r.Run()

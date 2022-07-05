@@ -15,6 +15,7 @@ type configS3 struct {
 	Region         string             `env:"REGION"`
 	ForcePathStyle bool               `env:"FORCE_PATH_STYLE"`
 	Credentials    configS3Credential `envPrefix:"CREDENTIAL_"`
+	Bucket         string             `env:"BUCKET"`
 }
 type config struct {
 	S3 configS3 `envPrefix:"S3_"`

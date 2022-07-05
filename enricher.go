@@ -165,7 +165,7 @@ func (etx *enrichment) toECS() (doc *ecs.Document, err error) {
 			},
 		},
 		URL: &ecs.URL{
-			Domain:   req.URL.Host,
+			Domain:   req.Host,
 			Full:     req.URL.String(),
 			Original: req.URL.String(),
 			Query:    req.URL.Query().Encode(),
