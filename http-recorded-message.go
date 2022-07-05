@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const transferEncodingHeader = "transfer-encoding"
@@ -32,30 +31,6 @@ func readCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
-type httpRecordedMessageContextDuration struct {
-	Start time.Time  `json:"start"`
-	End   *time.Time `json:"end"`
-}
-type httpRecordedMessageContextDurations struct {
-	Proxy *httpRecordedMessageContextDuration `json:"proxy"`
-	Total httpRecordedMessageContextDuration  `json:"total"`
-}
-type httpRecordedMessageContextCredential struct {
-	Username    string `json:"username"`
-	PublicKey   string `json:"public_key"`
-	Fingerprint string `json:"fingerprint"`
-}
-type httpRecordedMessageContextDomain struct {
-	Name   string `json:"name"`
-	Target string `json:"target"`
-}
-type httpRecordedMessageContext struct {
-	ID string `json:"id"`
-
-	Durations  httpRecordedMessageContextDurations  `json:"durations"`
-	Credential httpRecordedMessageContextCredential `json:"credential"`
-	Domain     httpRecordedMessageContextDomain     `json:"domain"`
-}
 type httpRecordedMessage struct {
 	scanner        bufio.Scanner
 	scannerWritter *io.PipeWriter
@@ -90,7 +65,7 @@ func (hrm *httpRecordedMessage) feed() {
 
 		if eofLine == nil {
 			eofLine = []byte(string(data))
-			data = hrm.consumeEmpty()
+			data = hrm.discardEmpty()
 		}
 
 		if bodyReading {
@@ -111,7 +86,7 @@ func (hrm *httpRecordedMessage) feed() {
 				hrm.scannerWritter.Write([]byte{'0', '\r', '\n', '\r', '\n'})
 			}
 			body, chunked, bodyReading = nil, false, false
-			data = hrm.consumeEmpty()
+			data = hrm.discardEmpty()
 		}
 
 		if isChunked(data) {
@@ -124,7 +99,7 @@ func (hrm *httpRecordedMessage) feed() {
 		hrm.scannerWritter.Write(data)
 	}
 }
-func (hrm *httpRecordedMessage) consumeEmpty() []byte {
+func (hrm *httpRecordedMessage) discardEmpty() []byte {
 	for hrm.scanner.Scan() {
 		data := hrm.scanner.Bytes()
 		if bytes.Compare(crlf, data) == 0 {

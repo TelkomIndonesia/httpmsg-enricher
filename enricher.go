@@ -188,7 +188,6 @@ func (etx *enrichment) toECS() (doc *ecs.Document, err error) {
 		match := &ecs.ThreatEnrichmentMatch{
 			Type:   "indicator_match_rule",
 			Atomic: Truncate(rule.MatchedData.Value, 200),
-			Field:  rule.MatchedData.VariableName,
 		}
 		atk := false
 		for _, tag := range rule.Rule.Tags {
