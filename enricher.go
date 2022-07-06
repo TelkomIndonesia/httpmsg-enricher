@@ -146,6 +146,14 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 			ECS: ecs.ECS{
 				Version: "8.3.0",
 			},
+			Event: &ecs.Event{
+				Kind:     "event",
+				Type:     []string{"access"},
+				Category: []string{"web", "authentication", "network"},
+				Created:  &ctx.Durations.Total.Start,
+				End:      ctx.Durations.Total.End,
+				Id:       ctx.ID,
+			},
 			URL: &ecs.URL{
 				Domain:   req.Host,
 				Full:     req.URL.String(),
