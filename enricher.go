@@ -11,7 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v2/seclang"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/telkomindonesia/crs-offline/ecs"
-	ecsx "github.com/telkomindonesia/crs-offline/ecs/extended"
+	ecsx "github.com/telkomindonesia/crs-offline/ecs/custom"
 )
 
 type enrichment struct {
