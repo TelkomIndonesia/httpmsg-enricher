@@ -27,7 +27,7 @@ func main() {
 	}
 	s3Client := s3.New(session.New(s3Config))
 
-	erc, err := newEnricher()
+	ercr, err := newEnricher()
 	if err != nil {
 		log.Fatalf("error initializing enricher: %v", err)
 	}
@@ -47,14 +47,14 @@ func main() {
 		}
 		defer resp.Body.Close()
 
-		er, err := erc.EnrichRecord(resp.Body)
+		erc, err := ercr.EnrichRecord(resp.Body)
 		if err != nil {
 			c.String(500, err.Error())
 			return
 		}
-		defer er.Close()
+		defer erc.Close()
 
-		ecs, err := er.toECS()
+		ecs, err := erc.toECS()
 		if err != nil {
 			c.String(500, err.Error())
 			return
@@ -70,7 +70,7 @@ func main() {
 		}
 		defer f.Close()
 
-		er, err := erc.EnrichRecord(f)
+		er, err := ercr.EnrichRecord(f)
 		if err != nil {
 			c.String(500, err.Error())
 			return

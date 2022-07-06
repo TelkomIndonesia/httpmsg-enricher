@@ -1,19 +1,23 @@
-package main
+package ecsx
 
 import (
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/types/variables"
 )
 
-type baseScores struct {
+type CRS struct {
+	Scores Scores `json:"scores"`
+}
+
+type ScoresBase struct {
 	CriticalAnomalyScore int `json:"critical_anomaly_score"`
 	ErrorAnomalyScore    int `json:"error_anomaly_score"`
 	WarningAnomalyScore  int `json:"warning_anomaly_score"`
 	NoticeAnomalyScore   int `json:"notice_anomaly_score"`
 }
 
-type scores struct {
-	Base baseScores `json:"base_scores"`
+type Scores struct {
+	Base ScoresBase `json:"base_scores"`
 
 	BlockingInboundAnomalyScore   int `json:"blocking_inbound_anomaly_score"`
 	DetectionInboundAnomalyScore  int `json:"detection_inbound_anomaly_score"`
@@ -40,10 +44,10 @@ type scores struct {
 	SqlErrorMatch int `json:"sql_error_match"`
 }
 
-func newScores(tx *coraza.Transaction) (s *scores) {
+func NewScores(tx *coraza.Transaction) (s *Scores) {
 	txData := tx.GetCollection(variables.TX)
-	s = &scores{
-		Base: baseScores{
+	s = &Scores{
+		Base: ScoresBase{
 			CriticalAnomalyScore: txData.GetFirstInt("critical_anomaly_score"),
 			ErrorAnomalyScore:    txData.GetFirstInt("error_anomaly_score"),
 			WarningAnomalyScore:  txData.GetFirstInt("warning_anomaly_score"),

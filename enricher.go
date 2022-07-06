@@ -11,6 +11,7 @@ import (
 	"github.com/corazawaf/coraza/v2/seclang"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/telkomindonesia/crs-offline/ecs"
+	ecsx "github.com/telkomindonesia/crs-offline/ecs/extended"
 )
 
 type enrichment struct {
@@ -117,11 +118,7 @@ func (etx *enrichment) processResponse() (err error) {
 	return
 }
 
-func (etx *enrichment) toScore() *scores {
-	return newScores(etx.tx)
-}
-
-func (etx *enrichment) toECS() (doc *ecs.Document, err error) {
+func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 	tx, req, res := etx.tx, etx.msg.req, etx.msg.res
 	if req == nil || res == nil {
 		return nil, fmt.Errorf("Please invoke ProcessRequest() and ProcessResponse() first.")
@@ -131,50 +128,73 @@ func (etx *enrichment) toECS() (doc *ecs.Document, err error) {
 		return nil, fmt.Errorf("error geting context: %w", err)
 	}
 
-	doc = &ecs.Document{
-		Base: ecs.Base{
-			Message:   "recorded HTTP message",
-			Timestamp: ctx.Durations.Proxy.Start,
-		},
-		ECS: ecs.ECS{
-			Version: "8.3.0",
-		},
-		HTTP: &ecs.HTTP{
-			Version: fmt.Sprintf("%d.%d", req.ProtoMajor, req.ProtoMinor),
-			Request: &ecs.HTTPRequest{
-				ID:       ctx.ID,
-				Method:   req.Method,
-				Referrer: req.Referer(),
-				HTTPMessage: ecs.HTTPMessage{
-					MimeType: etx.reqMime,
-					Body: &ecs.HTTPMessageBody{
-						Bytes:   int64(etx.reqBody.Len()),
-						Content: etx.reqBody.String(),
-					},
-				},
+	toLower := func(m map[string][]string) map[string][]string {
+		nm := map[string][]string{}
+		for k, v := range m {
+			nm[strings.ToLower(k)] = v
+		}
+		return nm
+	}
+
+	doc = &ecsx.Document{
+		Document: ecs.Document{
+			Base: ecs.Base{
+				Message:   "recorded HTTP message",
+				Timestamp: ctx.Durations.Proxy.Start,
 			},
-			Response: &ecs.HTTPResponse{
-				StatusCode: res.StatusCode,
-				HTTPMessage: ecs.HTTPMessage{
-					MimeType: etx.reqMime,
-					Body: &ecs.HTTPMessageBody{
-						Bytes:   int64(etx.resBody.Len()),
-						Content: etx.resBody.String(),
-					},
-				},
+			ECS: ecs.ECS{
+				Version: "8.3.0",
+			},
+			URL: &ecs.URL{
+				Domain:   req.Host,
+				Full:     req.URL.String(),
+				Original: req.URL.String(),
+				Query:    req.URL.Query().Encode(),
+				Fragment: req.URL.Fragment,
+				Path:     req.URL.Path,
+				Scheme:   req.URL.Scheme,
+			},
+			Threat: &ecs.Threat{
+				Enrichments: []ecs.ThreatEnrichments{},
 			},
 		},
-		URL: &ecs.URL{
-			Domain:   req.Host,
-			Full:     req.URL.String(),
-			Original: req.URL.String(),
-			Query:    req.URL.Query().Encode(),
-			Fragment: req.URL.Fragment,
-			Path:     req.URL.Path,
-			Scheme:   req.URL.Scheme,
+
+		CRS: &ecsx.CRS{
+			Scores: *ecsx.NewScores(etx.tx),
 		},
-		Threat: &ecs.Threat{
-			Enrichments: []ecs.ThreatEnrichments{},
+
+		HTTP: &ecsx.HTTP{
+			HTTP: ecs.HTTP{
+				Version: fmt.Sprintf("%d.%d", req.ProtoMajor, req.ProtoMinor),
+			},
+			Request: &ecsx.HTTPRequest{
+				HTTPRequest: ecs.HTTPRequest{
+					ID:       ctx.ID,
+					Method:   req.Method,
+					Referrer: req.Referer(),
+					HTTPMessage: ecs.HTTPMessage{
+						MimeType: etx.reqMime,
+						Body: &ecs.HTTPMessageBody{
+							Bytes:   int64(etx.reqBody.Len()),
+							Content: etx.reqBody.String(),
+						},
+					},
+				},
+				Headers: toLower(req.Header),
+			},
+			Response: &ecsx.HTTPResponse{
+				HTTPResponse: ecs.HTTPResponse{
+					StatusCode: res.StatusCode,
+					HTTPMessage: ecs.HTTPMessage{
+						MimeType: etx.resMime,
+						Body: &ecs.HTTPMessageBody{
+							Bytes:   int64(etx.resBody.Len()),
+							Content: etx.resBody.String(),
+						},
+					},
+				},
+				Headers: toLower(res.Header),
+			},
 		},
 	}
 
@@ -244,21 +264,21 @@ func newEnricher() (cw enricher, err error) {
 	return enricher{waf}, nil
 }
 
-func (er enricher) newTransaction(record io.Reader) *enrichment {
+func (ercr enricher) newTransaction(record io.Reader) *enrichment {
 	return &enrichment{
-		tx:  er.waf.NewTransaction(),
+		tx:  ercr.waf.NewTransaction(),
 		msg: newHTTPRecordedMessage(record),
 	}
 }
 
-func (er enricher) EnrichRecord(record io.Reader) (tx *enrichment, err error) {
-	tx = er.newTransaction(record)
+func (ercr enricher) EnrichRecord(record io.Reader) (erc *enrichment, err error) {
+	erc = ercr.newTransaction(record)
 
-	err = tx.processRequest()
+	err = erc.processRequest()
 	if err != nil {
 		return nil, fmt.Errorf("error parsing request: %w", err)
 	}
-	err = tx.processResponse()
+	err = erc.processResponse()
 	if err != nil {
 		return nil, fmt.Errorf("error parsing response: %w", err)
 	}

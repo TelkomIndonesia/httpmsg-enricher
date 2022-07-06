@@ -58,7 +58,7 @@ func (hrm *httpRecordedMessage) feed() {
 	defer hrm.scannerWritter.Close()
 
 	var body, eofLine []byte
-	bodyReading, chunked := false, false
+	var bodyReading, chunked bool
 	hrm.scanner.Split(readCRLF)
 	for hrm.scanner.Scan() {
 		data := hrm.scanner.Bytes()
@@ -153,8 +153,10 @@ func (hrm *httpRecordedMessage) Request() (_ *http.Request, err error) {
 
 	r := bufio.NewReader(hrm.record)
 	hrm.req, err = http.ReadRequest(r)
-	if len(hrm.req.TransferEncoding) > 0 {
-		hrm.req.Header.Add("transfer-encoding", strings.Join(hrm.req.TransferEncoding, ","))
+	for _, te := range hrm.req.TransferEncoding {
+		if strings.EqualFold("chunked", te) {
+			hrm.req.Header.Add("transfer-encoding", te)
+		}
 	}
 	return hrm.req, err
 }
@@ -173,8 +175,10 @@ func (hrm *httpRecordedMessage) Response() (_ *http.Response, err error) {
 
 	r := bufio.NewReader(hrm.record)
 	hrm.res, err = http.ReadResponse(r, hrm.req)
-	if len(hrm.res.TransferEncoding) > 0 {
-		hrm.res.Header.Add("transfer-encoding", strings.Join(hrm.res.TransferEncoding, ","))
+	for _, te := range hrm.res.TransferEncoding {
+		if strings.EqualFold("chunked", te) {
+			hrm.res.Header.Add("transfer-encoding", te)
+		}
 	}
 	return hrm.res, err
 }
