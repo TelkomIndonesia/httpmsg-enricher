@@ -15,5 +15,8 @@ type Document struct {
 	HTTP *HTTP `json:"http,omitempty"`
 	URL  *URL  `json:"url,omitempty"`
 
+	User      *User      `json:"user,omitempty"`
+	UserAgent *UserAgent `json:"user_agent,omitempty"`
+
 	Threat *Threat `json:"threat,omitempty"`
 }

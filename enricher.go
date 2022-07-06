@@ -10,6 +10,7 @@ import (
 	"github.com/corazawaf/coraza/v2"
 	"github.com/corazawaf/coraza/v2/seclang"
 	"github.com/gabriel-vasile/mimetype"
+	ua "github.com/mileusna/useragent"
 	"github.com/telkomindonesia/crs-offline/ecs"
 	ecsx "github.com/telkomindonesia/crs-offline/ecs/custom"
 )
@@ -196,6 +197,28 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 				Headers: toLower(res.Header),
 			},
 		},
+	}
+
+	if ctx != nil && ctx.Credential != nil {
+		doc.User = &ecs.User{
+			Name: ctx.Credential.Username,
+		}
+	}
+
+	if v := req.Header.Get("user-agent"); v != "" {
+		uap := ua.Parse(v)
+		doc.UserAgent = &ecs.UserAgent{
+			Original: v,
+			Name:     uap.Name,
+			Version:  uap.Version,
+			Device: &ecs.UserAgentDevice{
+				Name: uap.Device,
+			},
+			OS: &ecs.OS{
+				Name:    uap.OS,
+				Version: uap.OSVersion,
+			},
+		}
 	}
 
 	for _, rule := range tx.MatchedRules {
