@@ -1,8 +1,8 @@
 package ecs
 
 type GeoPoint struct {
-	Lon float32 `json:"lon,omitempty"`
-	Lat float32 `json:"lat,omitempty"`
+	Lon float64 `json:"lon,omitempty"`
+	Lat float64 `json:"lat,omitempty"`
 }
 type Geo struct {
 	CityName       string    `json:"city_name,omitemtpty"`

@@ -27,7 +27,10 @@ func main() {
 	}
 	s3Client := s3.New(session.New(s3Config))
 
-	ercr, err := newEnricher()
+	ercr, err := newEnricher(
+		enricherWithCRS("crs/coraza.conf", "crs/crs-setup.conf", "crs/rules/*.conf"),
+		enricherWithOptionalGeoIP(cfg.GeoIP.CityDBPath),
+	)
 	if err != nil {
 		log.Fatalf("error initializing enricher: %v", err)
 	}

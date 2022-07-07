@@ -18,7 +18,10 @@ func TestEnricher(t *testing.T) {
 	}
 
 	for _, tt := range table {
-		sc, err := newEnricher()
+		sc, err := newEnricher(
+			enricherWithCRS("crs/coraza.conf", "crs/crs-setup.conf", "crs/rules/*.conf"),
+			enricherWithOptionalGeoIP("testdata/GeoLite2-City-Test.mmdb"),
+		)
 		require.Nil(t, err, "unexpected error in instantiating scorer")
 
 		f, err := os.ReadFile(tt.file)

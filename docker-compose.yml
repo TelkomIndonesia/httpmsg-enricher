@@ -1,0 +1,16 @@
+services:
+  geoipupdate:
+    image: maxmindinc/geoipupdate
+    environment:
+      GEOIPUPDATE_ACCOUNT_ID:
+      GEOIPUPDATE_LICENSE_KEY:
+      GEOIPUPDATE_EDITION_IDS:
+      
+      GEOIPUPDATE_FREQUENCY:
+      GEOIPUPDATE_HOST:
+      GEOIPUPDATE_PROXY:
+      GEOIPUPDATE_PROXY_USER_PASSWORD:
+      GEOIPUPDATE_PRESERVE_FILE_TIMES:
+      GEOIPUPDATE_VERBOSE:
+    volumes:
+      - $PWD/geoip:/usr/share/GeoIP

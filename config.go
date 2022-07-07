@@ -6,9 +6,9 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-type configS3Credential struct {
-	KeyID     string `env:"ACCESS_KEY_ID"`
-	SecretKey string `env:"SECRET_ACCESS_KEY"`
+type config struct {
+	S3    configS3    `envPrefix:"S3_"`
+	GeoIP configGeoIP `envPrefix:"GEOIP_"`
 }
 type configS3 struct {
 	Endpoint       string             `env:"ENDPOINT"`
@@ -17,8 +17,12 @@ type configS3 struct {
 	Credentials    configS3Credential `envPrefix:"CREDENTIAL_"`
 	Bucket         string             `env:"BUCKET"`
 }
-type config struct {
-	S3 configS3 `envPrefix:"S3_"`
+type configS3Credential struct {
+	KeyID     string `env:"ACCESS_KEY_ID"`
+	SecretKey string `env:"SECRET_ACCESS_KEY"`
+}
+type configGeoIP struct {
+	CityDBPath string `env:"CITY_DB_PATH"`
 }
 
 func newConfig() (*config, error) {

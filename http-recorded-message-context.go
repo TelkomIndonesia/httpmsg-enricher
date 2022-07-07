@@ -40,5 +40,5 @@ type httpRecordedMessageContextDomain struct {
 }
 
 type httpRecordedMessageContextConnectionClient struct {
-	IP *net.IP `json:"ip,omitempty"`
+	IP net.IP `json:"ip,omitempty"`
 }
