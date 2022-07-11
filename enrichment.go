@@ -6,6 +6,7 @@ import (
 
 	"github.com/telkomindonesia/crs-offline/ecs"
 	ecsx "github.com/telkomindonesia/crs-offline/ecs/custom"
+	"go.uber.org/multierr"
 )
 
 type enrichment struct {
@@ -31,7 +32,9 @@ func (etx *enrichment) processRequest() (err error) {
 	}
 	MultiCopy(etx.msg.req.Body, w...)
 	for _, sec := range etx.secs {
-		sec.processRequest(req)
+		if errt := sec.processRequest(req); err != nil {
+			err = multierr.Append(err, errt)
+		}
 	}
 
 	return
@@ -51,7 +54,9 @@ func (etx *enrichment) processResponse() (err error) {
 	}
 	MultiCopy(etx.msg.res.Body, w...)
 	for _, sec := range etx.secs {
-		sec.processResponse(res)
+		if errt := sec.processResponse(res); err != nil {
+			err = multierr.Append(err, errt)
+		}
 	}
 
 	return
@@ -146,16 +151,22 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 	}
 
 	for _, sec := range etx.secs {
-		sec.enrich(doc, etx.msg)
+		if errt := sec.enrich(doc, etx.msg); errt != nil {
+			err = multierr.Append(err, errt)
+		}
 	}
 
 	return
 }
 
 func (etx enrichment) Close() (err error) {
-	etx.msg.Close()
+	if errt := etx.msg.Close(); errt != nil {
+		err = multierr.Append(err, errt)
+	}
 	for _, sec := range etx.secs {
-		sec.Close()
+		if errt := sec.Close(); errt != nil {
+			err = multierr.Append(err, errt)
+		}
 	}
 	return
 }

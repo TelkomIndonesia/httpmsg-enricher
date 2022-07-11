@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/go-multierror"
 )
 
 const transferEncodingHeader = "transfer-encoding"
@@ -197,7 +199,11 @@ func (hrm *httpRecordedMessage) Context() (ctx *httpRecordedMessageContext, err 
 
 func (hrm *httpRecordedMessage) Close() (err error) {
 	io.Copy(io.Discard, hrm.record)
-	hrm.req.Body.Close()
-	hrm.res.Body.Close()
+	if errt := hrm.req.Body.Close(); errt != nil {
+		err = multierror.Append(errt)
+	}
+	if errt := hrm.res.Body.Close(); errt != nil {
+		err = multierror.Append(errt)
+	}
 	return
 }

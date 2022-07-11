@@ -6,6 +6,7 @@ import (
 
 	"github.com/gabriel-vasile/mimetype"
 	ecsx "github.com/telkomindonesia/crs-offline/ecs/custom"
+	"go.uber.org/multierr"
 )
 
 type writableMimeReader struct {
@@ -45,10 +46,14 @@ type mimeEnrichment struct {
 	res *writableMimeReader
 }
 
-func (erc *mimeEnrichment) Close() error {
-	erc.req.Close()
-	erc.res.Close()
-	return nil
+func (erc *mimeEnrichment) Close() (err error) {
+	if errt := erc.req.Close(); errt != nil {
+		err = multierr.Append(err, errt)
+	}
+	if errt := erc.res.Close(); errt != nil {
+		err = multierr.Append(err, errt)
+	}
+	return
 }
 
 func (erc *mimeEnrichment) requestBodyWriter() closableWriter {
