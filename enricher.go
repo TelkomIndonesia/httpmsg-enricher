@@ -21,9 +21,6 @@ func newEnricher(opts ...enricherFunc) (ercr *enricher, err error) {
 			return nil, err
 		}
 	}
-	if ercr.waf == nil {
-		return nil, fmt.Errorf("No CRS are provided")
-	}
 	return
 }
 
@@ -57,12 +54,23 @@ func enricherWithCRS(rules ...string) enricherFunc {
 	}
 }
 
-func (ercr *enricher) newEnrichment(record io.Reader) *enrichment {
-	return &enrichment{
+func (ercr *enricher) newEnrichment(record io.Reader) (erc *enrichment) {
+	erc = &enrichment{
 		ercr: ercr,
-		tx:   ercr.waf.NewTransaction(),
 		msg:  newHTTPRecordedMessage(record),
+
+		secs: []subEnrichment{
+			&mimeEnrichment{req: newWritableMimeReader(), res: newWritableMimeReader()},
+			&uaEnrichment{},
+		},
 	}
+	if ercr.waf != nil {
+		erc.secs = append(erc.secs, &crsSubEnrichment{tx: ercr.waf.NewTransaction()})
+	}
+	if ercr.geoDB != nil {
+		erc.secs = append(erc.secs, &geoipEnrichment{ercr.geoDB})
+	}
+	return
 }
 
 func (ercr *enricher) EnrichRecord(record io.Reader) (erc *enrichment, err error) {
@@ -75,7 +83,6 @@ func (ercr *enricher) EnrichRecord(record io.Reader) (erc *enrichment, err error
 	if err = erc.processResponse(); err != nil {
 		return nil, fmt.Errorf("error parsing response: %w", err)
 	}
-
 	return
 }
 
