@@ -39,6 +39,8 @@ type httpRecordedMessage struct {
 	req *http.Request
 	res *http.Response
 	ctx *httpRecordedMessageContext
+
+	closed bool
 }
 
 func newHTTPRecordedMessage(r io.Reader) *httpRecordedMessage {
@@ -191,4 +193,11 @@ func (hrm *httpRecordedMessage) Context() (ctx *httpRecordedMessageContext, err 
 	r := bufio.NewReader(hrm.record)
 	err = json.NewDecoder(r).Decode(&hrm.ctx)
 	return hrm.ctx, nil
+}
+
+func (hrm *httpRecordedMessage) Close() (err error) {
+	io.Copy(io.Discard, hrm.record)
+	hrm.req.Body.Close()
+	hrm.res.Body.Close()
+	return
 }

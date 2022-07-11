@@ -153,9 +153,7 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 }
 
 func (etx enrichment) Close() (err error) {
-	etx.msg.req.Body.Close()
-	etx.msg.res.Body.Close()
-
+	etx.msg.Close()
 	for _, sec := range etx.secs {
 		sec.Close()
 	}
