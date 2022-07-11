@@ -66,7 +66,7 @@ func main() {
 	})
 
 	r.GET("/ecs/files/:filename", func(c *gin.Context) {
-		f, err := os.Open(c.Param("filename"))
+		f, err := os.Open("./" + c.Param("filename"))
 		if err != nil {
 			c.String(500, err.Error())
 			return
