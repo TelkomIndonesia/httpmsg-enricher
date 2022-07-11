@@ -132,6 +132,9 @@ func (hrm *httpRecordedMessage) feedBody(body []byte, chunked bool) (n int, err 
 
 func isChunked(headerline []byte) (chunked bool) {
 	l := len(transferEncodingHeader)
+	if len(headerline) <= l+1 {
+		return
+	}
 
 	if h := string(headerline[:l+1]); !strings.EqualFold(transferEncodingHeader+":", h) {
 		return
