@@ -56,12 +56,12 @@ func (erc *mimeEnrichment) Close() (err error) {
 	return
 }
 
-func (erc *mimeEnrichment) requestBodyWriter() closableWriter {
+func (erc *mimeEnrichment) requestBodyWriter() io.WriteCloser {
 	return erc.req.w
 }
 func (erc *mimeEnrichment) processRequest(req *http.Request) (err error) { return nil }
 
-func (erc *mimeEnrichment) responseBodyWriter() closableWriter {
+func (erc *mimeEnrichment) responseBodyWriter() io.WriteCloser {
 	return erc.res.w
 }
 func (erc *mimeEnrichment) processResponse(res *http.Response) (err error) { return nil }

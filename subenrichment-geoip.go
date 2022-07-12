@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/oschwald/geoip2-golang"
@@ -15,9 +16,9 @@ type geoipEnrichment struct {
 	db *geoip2.Reader
 }
 
-func (g *geoipEnrichment) requestBodyWriter() closableWriter              { return wnoop }
+func (g *geoipEnrichment) requestBodyWriter() io.WriteCloser              { return nopwc }
 func (g *geoipEnrichment) processRequest(req *http.Request) (err error)   { return }
-func (g *geoipEnrichment) responseBodyWriter() closableWriter             { return wnoop }
+func (g *geoipEnrichment) responseBodyWriter() io.WriteCloser             { return nopwc }
 func (g *geoipEnrichment) processResponse(res *http.Response) (err error) { return }
 
 func (g *geoipEnrichment) enrich(doc *ecsx.Document, msg *httpRecordedMessage) (err error) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -23,8 +24,8 @@ func (erc *crsSubEnrichment) Close() error {
 	return erc.tx.Clean()
 }
 
-func (erc *crsSubEnrichment) requestBodyWriter() closableWriter {
-	return wcloserNoop{erc.tx.RequestBodyBuffer}
+func (erc *crsSubEnrichment) requestBodyWriter() io.WriteCloser {
+	return nopCloser{erc.tx.RequestBodyBuffer}
 }
 
 func (erc *crsSubEnrichment) processRequest(req *http.Request) (err error) {
@@ -62,8 +63,8 @@ func (erc *crsSubEnrichment) processRequest(req *http.Request) (err error) {
 	return
 }
 
-func (erc *crsSubEnrichment) responseBodyWriter() closableWriter {
-	return wcloserNoop{erc.tx.ResponseBodyBuffer}
+func (erc *crsSubEnrichment) responseBodyWriter() io.WriteCloser {
+	return nopCloser{erc.tx.ResponseBodyBuffer}
 }
 
 func (erc *crsSubEnrichment) processResponse(res *http.Response) (err error) {

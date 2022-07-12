@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 
 	ua "github.com/mileusna/useragent"
@@ -13,9 +14,9 @@ var _ subEnrichment = &uaEnrichment{}
 
 type uaEnrichment struct{}
 
-func (uaEnrichment) requestBodyWriter() closableWriter              { return wnoop }
+func (uaEnrichment) requestBodyWriter() io.WriteCloser              { return nopwc }
 func (uaEnrichment) processRequest(req *http.Request) (err error)   { return }
-func (uaEnrichment) responseBodyWriter() closableWriter             { return wnoop }
+func (uaEnrichment) responseBodyWriter() io.WriteCloser             { return nopwc }
 func (uaEnrichment) processResponse(res *http.Response) (err error) { return }
 func (uaEnrichment) Close() (err error)                             { return }
 

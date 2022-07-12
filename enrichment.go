@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/telkomindonesia/crs-offline/ecs"
@@ -26,7 +27,7 @@ func (etx *enrichment) processRequest() (err error) {
 	}
 
 	etx.reqBody = newTruncatedBuffer(1024 * 1024)
-	w := []closableWriter{}
+	w := []io.WriteCloser{}
 	for _, sec := range etx.secs {
 		w = append(w, sec.requestBodyWriter())
 	}
@@ -48,7 +49,7 @@ func (etx *enrichment) processResponse() (err error) {
 
 	// response body
 	etx.resBody = newTruncatedBuffer(1024 * 1024)
-	w := []closableWriter{}
+	w := []io.WriteCloser{}
 	for _, sec := range etx.secs {
 		w = append(w, sec.responseBodyWriter())
 	}
