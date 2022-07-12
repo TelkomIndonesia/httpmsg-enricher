@@ -1,0 +1,7 @@
+.git
+.geoip
+.dockerignore
+.env
+.gitignore
+Dockerfile
+docker-compose.*

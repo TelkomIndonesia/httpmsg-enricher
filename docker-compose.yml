@@ -13,4 +13,4 @@ services:
       GEOIPUPDATE_PRESERVE_FILE_TIMES:
       GEOIPUPDATE_VERBOSE:
     volumes:
-      - $PWD/geoip:/usr/share/GeoIP
+      - $PWD/.geoip:/usr/share/GeoIP
