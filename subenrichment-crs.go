@@ -89,6 +89,9 @@ func (erc *crsSubEnrichment) enrich(doc *ecsx.Document, msg *httpRecordedMessage
 		Scores: *ecsx.NewScores(erc.tx),
 	}
 
+	if doc.Threat == nil {
+		doc.Threat = &ecs.Threat{}
+	}
 	for _, rule := range erc.tx.MatchedRules {
 		idc := ecs.ThreatIndicator{
 			Description: rule.ErrorLog(0),

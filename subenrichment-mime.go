@@ -67,6 +67,16 @@ func (erc *mimeEnrichment) responseBodyWriter() closableWriter {
 func (erc *mimeEnrichment) processResponse(res *http.Response) (err error) { return nil }
 
 func (erc *mimeEnrichment) enrich(doc *ecsx.Document, msg *httpRecordedMessage) (err error) {
+	if doc.HTTP == nil {
+		doc.HTTP = &ecsx.HTTP{}
+	}
+	if doc.HTTP.Request == nil {
+		doc.HTTP.Request = &ecsx.HTTPRequest{}
+	}
+	if doc.HTTP.Response == nil {
+		doc.HTTP.Response = &ecsx.HTTPResponse{}
+	}
+
 	doc.HTTP.Request.MimeType = erc.req.mime
 	doc.HTTP.Response.MimeType = erc.res.mime
 	return
