@@ -17,7 +17,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("error loading config: %v", err)
 	}
-	log.Print(cfg)
 
 	s3Config := &aws.Config{
 		Credentials:      credentials.NewStaticCredentials(cfg.S3.Credentials.KeyID, cfg.S3.Credentials.SecretKey, ""),
