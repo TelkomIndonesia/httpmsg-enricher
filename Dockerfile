@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/cache/go-mod \
 FROM alpine:3.16
 
 WORKDIR /app
-COPY --from=builder /src/httprec $WORKDIR/httprec
-COPY --from=builder /src/crs $WORKDIR/crs
+COPY --from=builder /src/httprec ./httprec
+COPY --from=builder /src/crs ./crs
 EXPOSE 8080
 ENTRYPOINT /app/httprec

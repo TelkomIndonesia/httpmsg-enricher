@@ -14,3 +14,12 @@ services:
       GEOIPUPDATE_VERBOSE:
     volumes:
       - $PWD/.geoip:/usr/share/GeoIP
+  
+  httprec:
+    build: .
+    image: telkomindonesia/httprec
+    env_file: .env
+    volumes:
+      - $PWD/.geoip:/app/.geoip
+    ports:
+      - 8080:8080
