@@ -5,13 +5,14 @@ import (
 	"time"
 )
 
+// TODO: This is not generic enough since it is currently only used for httpsig-proxy log
 type httpRecordedMessageContext struct {
 	ID string `json:"id,omitempty"`
 
 	Connection *httpRecordedMessageContextConnection `json:"connection,omitempty"`
 	Durations  *httpRecordedMessageContextDurations  `json:"durations,omitempty"`
-	Credential *httpRecordedMessageContextCredential `json:"credential,omitempty"`
-	Domain     *httpRecordedMessageContextDomain     `json:"domain,omitempty"`
+	User       *httpRecordedMessageContextUser       `json:"user,omitempty"`
+	Host       *httpRecordedMessageContextHost       `json:"host,omitempty"`
 }
 
 type httpRecordedMessageContextConnection struct {
@@ -28,13 +29,13 @@ type httpRecordedMessageContextDuration struct {
 	End   *time.Time `json:"end,omitempty"`
 }
 
-type httpRecordedMessageContextCredential struct {
+type httpRecordedMessageContextUser struct {
 	Username    string  `json:"username,omitempty"`
 	PublicKey   *string `json:"public_key,omitempty"`
-	Fingerprint *string `json:"fingerprint,omitempty"`
+	Fingerprint *string `json:"public_key_fingerprint,omitempty"`
 }
 
-type httpRecordedMessageContextDomain struct {
+type httpRecordedMessageContextHost struct {
 	Name   string  `json:"name,omitempty"`
 	Target *string `json:"target,omitempty"`
 }

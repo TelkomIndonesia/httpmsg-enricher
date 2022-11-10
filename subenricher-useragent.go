@@ -10,17 +10,17 @@ import (
 	ecsx "github.com/telkomindonesia/crs-offline/ecs/custom"
 )
 
-var _ subEnrichment = &uaEnrichment{}
+var _ subEnricher = &uaEnricher{}
 
-type uaEnrichment struct{}
+type uaEnricher struct{}
 
-func (uaEnrichment) requestBodyWriter() io.WriteCloser              { return nopwc }
-func (uaEnrichment) processRequest(req *http.Request) (err error)   { return }
-func (uaEnrichment) responseBodyWriter() io.WriteCloser             { return nopwc }
-func (uaEnrichment) processResponse(res *http.Response) (err error) { return }
-func (uaEnrichment) Close() (err error)                             { return }
+func (uaEnricher) requestBodyWriter() io.WriteCloser              { return nopwc }
+func (uaEnricher) processRequest(req *http.Request) (err error)   { return }
+func (uaEnricher) responseBodyWriter() io.WriteCloser             { return nopwc }
+func (uaEnricher) processResponse(res *http.Response) (err error) { return }
+func (uaEnricher) Close() (err error)                             { return }
 
-func (uaEnrichment) enrich(doc *ecsx.Document, msg *httpRecordedMessage) (err error) {
+func (uaEnricher) enrich(doc *ecsx.Document, msg *httpRecordedMessage) (err error) {
 	req, err := msg.Request()
 	if err != nil {
 		return fmt.Errorf("error getting request: %w", err)

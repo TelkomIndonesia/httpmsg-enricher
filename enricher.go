@@ -59,16 +59,16 @@ func (ercr *enricher) newEnrichment(record io.Reader) (erc *enrichment) {
 		ercr: ercr,
 		msg:  newHTTPRecordedMessage(record),
 
-		secs: []subEnrichment{
-			&mimeEnrichment{req: newWritableMimeReader(), res: newWritableMimeReader()},
-			&uaEnrichment{},
+		secs: []subEnricher{
+			&mimeEnricher{req: newWritableMimeReader(), res: newWritableMimeReader()},
+			&uaEnricher{},
 		},
 	}
 	if ercr.waf != nil {
-		erc.secs = append(erc.secs, &crsSubEnrichment{tx: ercr.waf.NewTransaction()})
+		erc.secs = append(erc.secs, &crsSubEnricher{tx: ercr.waf.NewTransaction()})
 	}
 	if ercr.geoDB != nil {
-		erc.secs = append(erc.secs, &geoipEnrichment{ercr.geoDB})
+		erc.secs = append(erc.secs, &geoipEnricher{ercr.geoDB})
 	}
 	return
 }

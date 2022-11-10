@@ -13,22 +13,22 @@ import (
 	ecsx "github.com/telkomindonesia/crs-offline/ecs/custom"
 )
 
-var _ subEnrichment = &crsSubEnrichment{}
+var _ subEnricher = &crsSubEnricher{}
 
-type crsSubEnrichment struct {
+type crsSubEnricher struct {
 	tx *coraza.Transaction
 }
 
-func (erc *crsSubEnrichment) Close() error {
+func (erc *crsSubEnricher) Close() error {
 	erc.tx.ProcessLogging()
 	return erc.tx.Clean()
 }
 
-func (erc *crsSubEnrichment) requestBodyWriter() io.WriteCloser {
+func (erc *crsSubEnricher) requestBodyWriter() io.WriteCloser {
 	return nopCloser{erc.tx.RequestBodyBuffer}
 }
 
-func (erc *crsSubEnrichment) processRequest(req *http.Request) (err error) {
+func (erc *crsSubEnricher) processRequest(req *http.Request) (err error) {
 	tx := erc.tx
 
 	client, port := "", 0
@@ -63,11 +63,11 @@ func (erc *crsSubEnrichment) processRequest(req *http.Request) (err error) {
 	return
 }
 
-func (erc *crsSubEnrichment) responseBodyWriter() io.WriteCloser {
+func (erc *crsSubEnricher) responseBodyWriter() io.WriteCloser {
 	return nopCloser{erc.tx.ResponseBodyBuffer}
 }
 
-func (erc *crsSubEnrichment) processResponse(res *http.Response) (err error) {
+func (erc *crsSubEnricher) processResponse(res *http.Response) (err error) {
 	tx := erc.tx
 
 	for k, v := range res.Header {
@@ -85,7 +85,7 @@ func (erc *crsSubEnrichment) processResponse(res *http.Response) (err error) {
 	return
 }
 
-func (erc *crsSubEnrichment) enrich(doc *ecsx.Document, msg *httpRecordedMessage) (err error) {
+func (erc *crsSubEnricher) enrich(doc *ecsx.Document, msg *httpRecordedMessage) (err error) {
 	doc.CRS = &ecsx.CRS{
 		Scores: *ecsx.NewScores(erc.tx),
 	}

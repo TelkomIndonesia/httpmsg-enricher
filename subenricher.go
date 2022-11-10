@@ -7,7 +7,7 @@ import (
 	ecsx "github.com/telkomindonesia/crs-offline/ecs/custom"
 )
 
-type subEnrichment interface {
+type subEnricher interface {
 	requestBodyWriter() io.WriteCloser
 	processRequest(req *http.Request) (err error)
 	responseBodyWriter() io.WriteCloser

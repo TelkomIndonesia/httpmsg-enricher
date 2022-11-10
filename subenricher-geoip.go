@@ -10,18 +10,18 @@ import (
 	ecsx "github.com/telkomindonesia/crs-offline/ecs/custom"
 )
 
-var _ subEnrichment = &geoipEnrichment{}
+var _ subEnricher = &geoipEnricher{}
 
-type geoipEnrichment struct {
+type geoipEnricher struct {
 	db *geoip2.Reader
 }
 
-func (g *geoipEnrichment) requestBodyWriter() io.WriteCloser              { return nopwc }
-func (g *geoipEnrichment) processRequest(req *http.Request) (err error)   { return }
-func (g *geoipEnrichment) responseBodyWriter() io.WriteCloser             { return nopwc }
-func (g *geoipEnrichment) processResponse(res *http.Response) (err error) { return }
+func (g *geoipEnricher) requestBodyWriter() io.WriteCloser              { return nopwc }
+func (g *geoipEnricher) processRequest(req *http.Request) (err error)   { return }
+func (g *geoipEnricher) responseBodyWriter() io.WriteCloser             { return nopwc }
+func (g *geoipEnricher) processResponse(res *http.Response) (err error) { return }
 
-func (g *geoipEnrichment) enrich(doc *ecsx.Document, msg *httpRecordedMessage) (err error) {
+func (g *geoipEnricher) enrich(doc *ecsx.Document, msg *httpRecordedMessage) (err error) {
 	if g.db == nil {
 		return fmt.Errorf("no geodatabase instantiated")
 	}
@@ -60,6 +60,6 @@ func (g *geoipEnrichment) enrich(doc *ecsx.Document, msg *httpRecordedMessage) (
 	return nil
 }
 
-func (g *geoipEnrichment) Close() error {
+func (g *geoipEnricher) Close() error {
 	return g.db.Close()
 }

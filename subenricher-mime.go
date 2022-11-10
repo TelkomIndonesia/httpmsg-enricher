@@ -39,14 +39,14 @@ func (me *writableMimeReader) Close() error {
 	return me.w.Close()
 }
 
-var _ subEnrichment = &mimeEnrichment{}
+var _ subEnricher = &mimeEnricher{}
 
-type mimeEnrichment struct {
+type mimeEnricher struct {
 	req *writableMimeReader
 	res *writableMimeReader
 }
 
-func (erc *mimeEnrichment) Close() (err error) {
+func (erc *mimeEnricher) Close() (err error) {
 	if errt := erc.req.Close(); errt != nil {
 		err = multierr.Append(err, errt)
 	}
@@ -56,17 +56,17 @@ func (erc *mimeEnrichment) Close() (err error) {
 	return
 }
 
-func (erc *mimeEnrichment) requestBodyWriter() io.WriteCloser {
+func (erc *mimeEnricher) requestBodyWriter() io.WriteCloser {
 	return erc.req.w
 }
-func (erc *mimeEnrichment) processRequest(req *http.Request) (err error) { return nil }
+func (erc *mimeEnricher) processRequest(req *http.Request) (err error) { return nil }
 
-func (erc *mimeEnrichment) responseBodyWriter() io.WriteCloser {
+func (erc *mimeEnricher) responseBodyWriter() io.WriteCloser {
 	return erc.res.w
 }
-func (erc *mimeEnrichment) processResponse(res *http.Response) (err error) { return nil }
+func (erc *mimeEnricher) processResponse(res *http.Response) (err error) { return nil }
 
-func (erc *mimeEnrichment) enrich(doc *ecsx.Document, msg *httpRecordedMessage) (err error) {
+func (erc *mimeEnricher) enrich(doc *ecsx.Document, msg *httpRecordedMessage) (err error) {
 	if doc.HTTP == nil {
 		doc.HTTP = &ecsx.HTTP{}
 	}

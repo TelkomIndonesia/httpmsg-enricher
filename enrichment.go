@@ -17,7 +17,7 @@ type enrichment struct {
 	reqBody *truncatedBuffer
 	resBody *truncatedBuffer
 
-	secs []subEnrichment
+	secs []subEnricher
 }
 
 func (etx *enrichment) processRequest() (err error) {
@@ -145,9 +145,9 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 		},
 	}
 
-	if ctx != nil && ctx.Credential != nil {
+	if ctx != nil && ctx.User != nil {
 		doc.User = &ecs.User{
-			Name: ctx.Credential.Username,
+			Name: ctx.User.Username,
 		}
 	}
 
