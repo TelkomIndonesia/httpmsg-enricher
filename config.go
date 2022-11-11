@@ -28,7 +28,7 @@ type configGeoIP struct {
 func newConfig() (*config, error) {
 	cfg := config{}
 	err := env.Parse(&cfg, env.Options{
-		Prefix: "CRS_OFFLINE_",
+		Prefix: "HTTPMSG_ENRICHER_",
 	})
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing config: %w", err)

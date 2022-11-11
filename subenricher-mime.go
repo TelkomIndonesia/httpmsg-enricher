@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gabriel-vasile/mimetype"
-	ecsx "github.com/telkomindonesia/httpmsg-enrichment/ecs/custom"
+	ecsx "github.com/telkomindonesia/httpmsg-enricher/ecs/custom"
 	"go.uber.org/multierr"
 )
 

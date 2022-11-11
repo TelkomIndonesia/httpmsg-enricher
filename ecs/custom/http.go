@@ -1,6 +1,6 @@
 package ecsx
 
-import "github.com/telkomindonesia/httpmsg-enrichment/ecs"
+import "github.com/telkomindonesia/httpmsg-enricher/ecs"
 
 type HTTPRequest struct {
 	ecs.HTTPRequest

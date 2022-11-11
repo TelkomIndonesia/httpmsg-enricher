@@ -1,4 +1,4 @@
-module github.com/telkomindonesia/httpmsg-enrichment
+module github.com/telkomindonesia/httpmsg-enricher
 
 go 1.18
 

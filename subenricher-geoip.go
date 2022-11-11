@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/oschwald/geoip2-golang"
-	"github.com/telkomindonesia/httpmsg-enrichment/ecs"
-	ecsx "github.com/telkomindonesia/httpmsg-enrichment/ecs/custom"
+	"github.com/telkomindonesia/httpmsg-enricher/ecs"
+	ecsx "github.com/telkomindonesia/httpmsg-enricher/ecs/custom"
 )
 
 var _ subEnricher = &geoipEnricher{}
