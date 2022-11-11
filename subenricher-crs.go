@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/corazawaf/coraza/v2"
-	"github.com/telkomindonesia/crs-offline/ecs"
-	ecsx "github.com/telkomindonesia/crs-offline/ecs/custom"
+	"github.com/telkomindonesia/httpmsg-enrichment/ecs"
+	ecsx "github.com/telkomindonesia/httpmsg-enrichment/ecs/custom"
 )
 
 var _ subEnricher = &crsSubEnricher{}

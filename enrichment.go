@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/telkomindonesia/crs-offline/ecs"
-	ecsx "github.com/telkomindonesia/crs-offline/ecs/custom"
+	"github.com/telkomindonesia/httpmsg-enrichment/ecs"
+	ecsx "github.com/telkomindonesia/httpmsg-enrichment/ecs/custom"
 	"go.uber.org/multierr"
 )
 

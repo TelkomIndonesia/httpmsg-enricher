@@ -1,4 +1,4 @@
-module github.com/telkomindonesia/crs-offline
+module github.com/telkomindonesia/httpmsg-enrichment
 
 go 1.18
 

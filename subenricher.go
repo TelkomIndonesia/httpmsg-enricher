@@ -4,7 +4,7 @@ import (
 	"io"
 	"net/http"
 
-	ecsx "github.com/telkomindonesia/crs-offline/ecs/custom"
+	ecsx "github.com/telkomindonesia/httpmsg-enrichment/ecs/custom"
 )
 
 type subEnricher interface {

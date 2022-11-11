@@ -17,7 +17,7 @@ const maxHeaderLine = 16384
 
 var crlf = []byte{'\r', '\n'}
 
-func readCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
+func splitCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
 	}
@@ -63,7 +63,7 @@ func (hrm *httpRecordedMessage) feed() {
 
 	var body, eofLine []byte
 	var bodyReading, chunked bool
-	hrm.scanner.Split(readCRLF)
+	hrm.scanner.Split(splitCRLF)
 	for hrm.scanner.Scan() {
 		data := hrm.scanner.Bytes()
 

@@ -1,6 +1,6 @@
 package ecsx
 
-import "github.com/telkomindonesia/crs-offline/ecs"
+import "github.com/telkomindonesia/httpmsg-enrichment/ecs"
 
 type HTTPRequest struct {
 	ecs.HTTPRequest

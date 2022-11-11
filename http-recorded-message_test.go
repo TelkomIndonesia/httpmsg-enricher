@@ -42,7 +42,7 @@ func TestReadCRLF(t *testing.T) {
 
 	for i, tt := range table {
 		scanner := bufio.NewScanner(strings.NewReader(tt.input))
-		scanner.Split(readCRLF)
+		scanner.Split(splitCRLF)
 
 		got := []string{}
 		for scanner.Scan() {
