@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/telkomindonesia/httpmsg-enricher/ecs"
 	ecsx "github.com/telkomindonesia/httpmsg-enricher/ecs/custom"
@@ -84,8 +85,7 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 	doc = &ecsx.Document{
 		Document: ecs.Document{
 			Base: ecs.Base{
-				Message:   "recorded HTTP message",
-				Timestamp: ctx.Durations.Total.Start,
+				Message: "recorded HTTP message",
 			},
 			ECS: ecs.ECS{
 				Version: "8.3.0",
@@ -94,9 +94,6 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 				Kind:     "event",
 				Type:     []string{"access"},
 				Category: []string{"web", "authentication", "network"},
-				Created:  &ctx.Durations.Total.Start,
-				End:      ctx.Durations.Total.End,
-				Id:       ctx.ID,
 			},
 			URL: &ecs.URL{
 				Domain:   req.Host,
@@ -118,7 +115,6 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 			},
 			Request: &ecsx.HTTPRequest{
 				HTTPRequest: ecs.HTTPRequest{
-					ID:       ctx.ID,
 					Method:   req.Method,
 					Referrer: req.Referer(),
 					HTTPMessage: ecs.HTTPMessage{
@@ -145,9 +141,30 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 		},
 	}
 
-	if ctx != nil && ctx.User != nil {
-		doc.User = &ecs.User{
-			Name: ctx.User.Username,
+	// ctx might be null
+	{
+		id := req.Header.Get("X-Request-Id")
+		if ctx != nil {
+			id = ctx.ID
+		}
+		doc.HTTP.Request.ID = id
+		doc.Event.Id = id
+
+		if ctx != nil && ctx.Durations != nil {
+			doc.Document.Timestamp = ctx.Durations.Total.Start
+			doc.Event.Created = &ctx.Durations.Total.Start
+			doc.Event.End = ctx.Durations.Total.End
+		} else {
+			now := time.Now()
+			doc.Document.Timestamp = now
+			doc.Event.Created = &now
+			doc.Event.End = &now
+		}
+
+		if ctx != nil && ctx.User != nil {
+			doc.User = &ecs.User{
+				Name: ctx.User.Username,
+			}
 		}
 	}
 
