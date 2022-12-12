@@ -85,7 +85,7 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 		Document: ecs.Document{
 			Base: ecs.Base{
 				Message:   "recorded HTTP message",
-				Timestamp: ctx.Durations.Proxy.Start,
+				Timestamp: ctx.Durations.Total.Start,
 			},
 			ECS: ecs.ECS{
 				Version: "8.3.0",

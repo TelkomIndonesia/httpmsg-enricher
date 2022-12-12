@@ -1,9 +1,13 @@
 package main
 
 import (
+	"compress/gzip"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"path"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -49,7 +53,17 @@ func main() {
 		}
 		defer resp.Body.Close()
 
-		erc, err := ercr.EnrichRecord(resp.Body)
+		body := resp.Body
+		if strings.Contains(*resp.ContentType, "application/gzip") {
+			body, err = gzip.NewReader(body)
+			if err != nil {
+				c.String(500, err.Error())
+				return
+			}
+			defer body.Close()
+		}
+
+		erc, err := ercr.EnrichRecord(body)
 		if err != nil {
 			c.String(500, err.Error())
 			return
@@ -65,12 +79,22 @@ func main() {
 	})
 
 	r.GET("/ecs/files/:filename", func(c *gin.Context) {
-		f, err := os.Open("./" + c.Param("filename"))
+		f, err := os.Open("./" + path.Clean(c.Param("filename")))
 		if err != nil {
 			c.String(500, err.Error())
 			return
 		}
 		defer f.Close()
+
+		body := io.ReadCloser(f)
+		if strings.HasSuffix(c.Param("filename"), ".gz") {
+			body, err = gzip.NewReader(body)
+			if err != nil {
+				c.String(500, err.Error())
+				return
+			}
+			defer body.Close()
+		}
 
 		er, err := ercr.EnrichRecord(f)
 		if err != nil {
