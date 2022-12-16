@@ -20,6 +20,10 @@ func (nopWriteCloser) Close() (err error) { return }
 var nopwc io.WriteCloser = nopWriteCloser{}
 
 func MultiCopy(r io.Reader, writers ...io.WriteCloser) (err error) {
+	if len(writers) == 0 {
+		return
+	}
+
 	iow := []io.Writer{}
 	for _, w := range writers {
 		iow = append(iow, w)
