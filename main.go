@@ -2,6 +2,7 @@ package main
 
 import (
 	"compress/gzip"
+	"context"
 	"io"
 	"log"
 	"net/http"
@@ -9,12 +10,30 @@ import (
 	"path"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	s3Config "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gin-gonic/gin"
 )
+
+func newS3Client(cfg *config) (*s3.Client, error) {
+	s3Cfg, err := s3Config.LoadDefaultConfig(context.TODO(),
+		s3Config.WithEndpointResolverWithOptions(
+			aws.EndpointResolverWithOptionsFunc(
+				func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+					return aws.Endpoint{URL: cfg.S3.Endpoint}, nil
+				})),
+		s3Config.WithRegion(cfg.S3.Region),
+		s3Config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(cfg.S3.Credentials.KeyID, cfg.S3.Credentials.SecretKey, ""),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return s3.NewFromConfig(s3Cfg), err
+}
 
 func main() {
 	cfg, err := newConfig()
@@ -22,20 +41,17 @@ func main() {
 		log.Fatalf("error loading config: %v", err)
 	}
 
-	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials(cfg.S3.Credentials.KeyID, cfg.S3.Credentials.SecretKey, ""),
-		Endpoint:         aws.String(cfg.S3.Endpoint),
-		Region:           aws.String(cfg.S3.Region),
-		S3ForcePathStyle: aws.Bool(cfg.S3.ForcePathStyle),
-	}
-	s3Client := s3.New(session.New(s3Config))
-
 	ercr, err := newEnricher(
 		enricherWithCRS("crs/coraza.conf", "crs/crs-setup.conf", "crs/rules/*.conf"),
 		enricherWithOptionalGeoIP(cfg.GeoIP.CityDBPath),
 	)
 	if err != nil {
 		log.Fatalf("error initializing enricher: %v", err)
+	}
+
+	s3Client, err := newS3Client(cfg)
+	if err != nil {
+		log.Fatalf("error initializing s3 client: %v", err)
 	}
 
 	r := gin.Default()
@@ -46,7 +62,7 @@ func main() {
 			Bucket: aws.String(cfg.S3.Bucket),
 			Key:    aws.String(c.Param("object_key")),
 		}
-		resp, err := s3Client.GetObject(getInput)
+		resp, err := s3Client.GetObject(context.TODO(), getInput)
 		if err != nil {
 			c.String(500, err.Error())
 			return

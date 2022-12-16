@@ -25,8 +25,10 @@ func splitCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if i := bytes.Index(data, crlf); i >= 0 {
 		return i + 2, data[:i+2], nil
 	}
-
-	if len(data) > maxHeaderLine || atEOF {
+	if len(data) > maxHeaderLine {
+		return maxHeaderLine, data[:maxHeaderLine], nil
+	}
+	if atEOF {
 		return len(data), data, nil
 	}
 
@@ -65,10 +67,10 @@ func (hrm *httpRecordedMessage) feed() {
 	var bodyReading, chunked bool
 	hrm.scanner.Split(splitCRLF)
 	for hrm.scanner.Scan() {
-		data := hrm.scanner.Bytes()
+		data := append([]byte(nil), hrm.scanner.Bytes()...)
 
 		if eofLine == nil {
-			eofLine = []byte(string(data))
+			eofLine = data
 			data = hrm.discardEmpty()
 		}
 
@@ -109,7 +111,7 @@ func (hrm *httpRecordedMessage) discardEmpty() []byte {
 		if bytes.Compare(crlf, data) == 0 {
 			continue
 		}
-		return data
+		return append([]byte(nil), data...)
 	}
 	return nil
 }
@@ -191,9 +193,7 @@ func (hrm *httpRecordedMessage) Context() (ctx *httpRecordedMessageContext, err 
 		}
 	}
 	io.Copy(io.Discard, hrm.res.Body)
-
-	r := bufio.NewReader(hrm.record)
-	err = json.NewDecoder(r).Decode(&hrm.ctx)
+	err = json.NewDecoder(hrm.record).Decode(&hrm.ctx)
 	return hrm.ctx, nil
 }
 
