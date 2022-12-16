@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/telkomindonesia/httpmsg-enricher/ecs"
@@ -32,7 +31,9 @@ func (etx *enrichment) processRequest() (err error) {
 	for _, sec := range etx.secs {
 		w = append(w, sec.requestBodyWriter())
 	}
-	MultiCopy(etx.msg.req.Body, w...)
+	if err := MultiCopy(etx.msg.req.Body, w...); err != nil {
+		return err
+	}
 	for _, sec := range etx.secs {
 		if errt := sec.processRequest(req); err != nil {
 			err = multierr.Append(err, errt)
@@ -54,7 +55,9 @@ func (etx *enrichment) processResponse() (err error) {
 	for _, sec := range etx.secs {
 		w = append(w, sec.responseBodyWriter())
 	}
-	MultiCopy(etx.msg.res.Body, w...)
+	if err := MultiCopy(etx.msg.res.Body, w...); err != nil {
+		return err
+	}
 	for _, sec := range etx.secs {
 		if errt := sec.processResponse(res); err != nil {
 			err = multierr.Append(err, errt)
@@ -72,14 +75,6 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 	ctx, err := etx.msg.Context()
 	if err != nil {
 		return nil, fmt.Errorf("error geting context: %w", err)
-	}
-
-	toLower := func(m map[string][]string) map[string][]string {
-		nm := map[string][]string{}
-		for k, v := range m {
-			nm[strings.ToLower(k)] = v
-		}
-		return nm
 	}
 
 	doc = &ecsx.Document{
@@ -124,7 +119,7 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 						},
 					},
 				},
-				Headers: toLower(req.Header),
+				Headers: MapStringsKeyToLower(req.Header),
 			},
 			Response: &ecsx.HTTPResponse{
 				HTTPResponse: ecs.HTTPResponse{
@@ -136,7 +131,7 @@ func (etx *enrichment) toECS() (doc *ecsx.Document, err error) {
 						},
 					},
 				},
-				Headers: toLower(res.Header),
+				Headers: MapStringsKeyToLower(res.Header),
 			},
 		},
 	}
