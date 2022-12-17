@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -169,13 +170,9 @@ func (hrm *httpRecordedMessage) Response() (_ *http.Response, err error) {
 	if hrm.res != nil {
 		return hrm.res, nil
 	}
-
 	if hrm.req == nil {
-		if _, err := hrm.Request(); err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("consume the request and its whole body first")
 	}
-	io.Copy(io.Discard, hrm.req.Body)
 
 	r := bufio.NewReader(hrm.record)
 	hrm.res, err = http.ReadResponse(r, hrm.req)
@@ -186,14 +183,13 @@ func (hrm *httpRecordedMessage) Context() (ctx *httpRecordedMessageContext, err 
 	if hrm.ctx != nil {
 		return hrm.ctx, nil
 	}
-
 	if hrm.res == nil {
-		if _, err := hrm.Response(); err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("consume the response and its whole body first")
 	}
-	io.Copy(io.Discard, hrm.res.Body)
-	err = json.NewDecoder(hrm.record).Decode(&hrm.ctx)
+
+	if err := json.NewDecoder(hrm.record).Decode(&hrm.ctx); err != nil && err != io.EOF {
+		return nil, err
+	}
 	return hrm.ctx, nil
 }
 
