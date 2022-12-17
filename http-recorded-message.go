@@ -39,7 +39,7 @@ func splitCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
 type httpRecordedMessage struct {
 	scanner        bufio.Scanner
 	scannerWritter *io.PipeWriter
-	record         io.Reader
+	record         *bufio.Reader
 
 	req *http.Request
 	res *http.Response
@@ -54,7 +54,7 @@ func newHTTPRecordedMessage(r io.Reader) *httpRecordedMessage {
 	hrm := &httpRecordedMessage{
 		scanner:        sc,
 		scannerWritter: w,
-		record:         r,
+		record:         bufio.NewReader(r),
 	}
 	go hrm.feed()
 
@@ -161,8 +161,7 @@ func (hrm *httpRecordedMessage) Request() (_ *http.Request, err error) {
 		return hrm.req, nil
 	}
 
-	r := bufio.NewReader(hrm.record)
-	hrm.req, err = http.ReadRequest(r)
+	hrm.req, err = http.ReadRequest(hrm.record)
 	return hrm.req, err
 }
 
@@ -174,8 +173,7 @@ func (hrm *httpRecordedMessage) Response() (_ *http.Response, err error) {
 		return nil, fmt.Errorf("consume the request and its whole body first")
 	}
 
-	r := bufio.NewReader(hrm.record)
-	hrm.res, err = http.ReadResponse(r, hrm.req)
+	hrm.res, err = http.ReadResponse(hrm.record, hrm.req)
 	return hrm.res, err
 }
 
