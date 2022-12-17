@@ -2,8 +2,8 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -63,23 +63,23 @@ func TestRecordedMessage(t *testing.T) {
 
 	for _, tt := range table {
 
-		f, err := os.ReadFile(tt.file)
+		f, err := os.Open(tt.file)
 		require.Nil(t, err, "unexpected error in reading test data")
 
-		h := newHTTPRecordedMessage(bytes.NewReader(f))
+		h := newHTTPRecordedMessage(io.ReadCloser(f))
 		req, err := h.Request()
 		require.Nil(t, err, "should not return error")
 		require.NotNil(t, req, "should not return nil request")
 		b, err := ioutil.ReadAll(req.Body)
 		require.Nil(t, err, "req body should be readable")
-		t.Log(string(b))
+		t.Log(len(b))
 
 		res, err := h.Response()
 		require.Nil(t, err, "should not return error")
 		require.NotNil(t, res, "should not return nil response")
 		b, err = ioutil.ReadAll(res.Body)
 		require.Nil(t, err, "res body should be readable")
-		t.Log(string(b))
+		t.Log(len(b))
 
 		ctx, err := h.Context()
 		require.Nil(t, err, "should not return error")

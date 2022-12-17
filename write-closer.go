@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 
@@ -29,10 +30,11 @@ func MultiCopy(r io.Reader, writers ...io.WriteCloser) (err error) {
 		iow = append(iow, w)
 	}
 
-	mw := io.MultiWriter(iow...)
+	mw := bufio.NewWriter(io.MultiWriter(iow...))
 	if _, err = io.Copy(mw, r); err != nil {
 		return fmt.Errorf("error copying: %w", err)
 	}
+	mw.Flush()
 
 	defer func() {
 		for _, w := range writers {

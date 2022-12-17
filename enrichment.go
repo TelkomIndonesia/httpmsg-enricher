@@ -25,6 +25,7 @@ func (etx *enrichment) processRequest() (err error) {
 	if err != nil {
 		return
 	}
+	defer req.Body.Close()
 
 	etx.reqBody = newTruncatedBuffer(8 * 1024 * 1024)
 	w := []io.WriteCloser{etx.reqBody}
@@ -48,8 +49,8 @@ func (etx *enrichment) processResponse() (err error) {
 	if err != nil {
 		return
 	}
+	defer res.Body.Close()
 
-	// response body
 	etx.resBody = newTruncatedBuffer(8 * 1024 * 1024)
 	w := []io.WriteCloser{etx.resBody}
 	for _, sec := range etx.secs {
