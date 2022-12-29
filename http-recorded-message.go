@@ -65,6 +65,7 @@ func (hrm *httpRecordedMessage) feed() {
 	defer hrm.scannerWritter.Close()
 
 	var body, eofLine []byte
+	var bodyWritten int
 	var bodyReading, chunked bool
 	hrm.scanner.Split(splitCRLF)
 	for hrm.scanner.Scan() {
@@ -82,17 +83,18 @@ func (hrm *httpRecordedMessage) feed() {
 				eof = true
 			}
 
-			hrm.feedBody(body, chunked)
+			n, _ := hrm.feedBody(body, chunked)
+			bodyWritten += n
 
 			if !eof {
 				body = data
 				continue
 			}
 
-			if chunked {
+			if chunked && bodyWritten > 0 {
 				hrm.scannerWritter.Write([]byte{'0', '\r', '\n', '\r', '\n'})
 			}
-			body, chunked, bodyReading = nil, false, false
+			body, bodyWritten, chunked, bodyReading = nil, 0, false, false
 			data = hrm.discardEmpty()
 		}
 
@@ -118,7 +120,7 @@ func (hrm *httpRecordedMessage) discardEmpty() []byte {
 }
 
 func (hrm *httpRecordedMessage) feedBody(body []byte, chunked bool) (n int, err error) {
-	if body == nil {
+	if body == nil || len(body) == 0 {
 		return
 	}
 
@@ -184,7 +186,6 @@ func (hrm *httpRecordedMessage) Context() (ctx *httpRecordedMessageContext, err 
 	if hrm.res == nil {
 		return nil, fmt.Errorf("consume the response and its whole body first")
 	}
-
 	if err := json.NewDecoder(hrm.record).Decode(&hrm.ctx); err != nil && err != io.EOF {
 		return nil, err
 	}
