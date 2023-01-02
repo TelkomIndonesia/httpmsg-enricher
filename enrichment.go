@@ -1,10 +1,13 @@
 package main
 
 import (
+	"compress/flate"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"time"
 
+	"github.com/andybalholm/brotli"
 	"github.com/telkomindonesia/httpmsg-enricher/ecs"
 	ecsx "github.com/telkomindonesia/httpmsg-enricher/ecs/custom"
 	"go.uber.org/multierr"
@@ -20,6 +23,22 @@ type enrichment struct {
 	secs []subEnricher
 }
 
+func decode(r io.Reader, encoding string) (rc io.ReadCloser, decoded bool, err error) {
+	decoded = true
+	switch encoding {
+	case "gzip":
+		rc, err = gzip.NewReader(r)
+		return
+	case "deflate":
+		rc = flate.NewReader(r)
+		return
+	case "br":
+		rc = io.NopCloser(brotli.NewReader(r))
+		return
+	}
+	return io.NopCloser(r), false, nil
+}
+
 func (etx *enrichment) processRequest() (err error) {
 	req, err := etx.msg.Request()
 	if err != nil {
@@ -27,12 +46,22 @@ func (etx *enrichment) processRequest() (err error) {
 	}
 	defer req.Body.Close()
 
+	body, decoded, err := decode(req.Body, req.Header.Get("Content-Encoding"))
+	if err != nil {
+		return
+	}
+	defer body.Close()
+	if decoded {
+		req.Header.Del("Content-Encoding")
+	}
+
 	etx.reqBody = newTruncatedBuffer(8 * 1024)
 	w := []io.WriteCloser{etx.reqBody}
 	for _, sec := range etx.secs {
 		w = append(w, sec.requestBodyWriter())
 	}
-	if err := MultiCopy(etx.msg.req.Body, w...); err != nil {
+
+	if err := MultiCopy(body, w...); err != nil {
 		return err
 	}
 	for _, sec := range etx.secs {
@@ -51,12 +80,22 @@ func (etx *enrichment) processResponse() (err error) {
 	}
 	defer res.Body.Close()
 
+	body, decoded, err := decode(res.Body, res.Header.Get("Content-Encoding"))
+	if err != nil {
+		return
+	}
+	defer body.Close()
+	if decoded {
+		res.Header.Del("Content-Encoding")
+	}
+
 	etx.resBody = newTruncatedBuffer(8 * 1024)
 	w := []io.WriteCloser{etx.resBody}
 	for _, sec := range etx.secs {
 		w = append(w, sec.responseBodyWriter())
 	}
-	if err := MultiCopy(etx.msg.res.Body, w...); err != nil {
+
+	if err := MultiCopy(body, w...); err != nil {
 		return err
 	}
 	for _, sec := range etx.secs {
