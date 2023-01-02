@@ -35,6 +35,7 @@ require (
 )
 
 require (
+	github.com/andybalholm/brotli v1.0.4
 	github.com/aws/aws-sdk-go-v2 v1.17.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.5
 	github.com/cloudflare/ahocorasick v0.0.0-20210425175752-730270c3e184 // indirect
