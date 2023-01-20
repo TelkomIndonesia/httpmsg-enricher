@@ -18,6 +18,10 @@ const maxHeaderLine = 16384
 
 var crlf = []byte{'\r', '\n'}
 
+func isCRLF(data []byte) bool {
+	return bytes.Compare(data, crlf) == 0
+}
+
 func splitCRLF(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
@@ -65,25 +69,44 @@ func (hrm *httpRecordedMessage) feed() {
 	defer hrm.scannerWritter.Close()
 
 	var body, eofLine []byte
-	var bodyWritten int
-	var bodyReading, chunked bool
+	var bodyWritten, httpMsgEncountered int
+	var bodyReading, trailerReading, bodyChunked bool
 	hrm.scanner.Split(splitCRLF)
 	for hrm.scanner.Scan() {
 		data := append([]byte(nil), hrm.scanner.Bytes()...)
-
 		if eofLine == nil {
-			eofLine = data
+			eofLine = data // the first line is always the eofline
 			data = hrm.discardEmpty()
+		}
+
+		if httpMsgEncountered == 2 { // expect only 2 HTTP message, request and response. Then just copy as-is.
+			hrm.scannerWritter.Write(data)
+			continue
+		}
+
+		if trailerReading {
+			if !isCRLF(data) {
+				hrm.scannerWritter.Write(data)
+				continue
+			}
+
+			if bodyChunked && bodyWritten > 0 {
+				hrm.scannerWritter.Write(crlf)
+			}
+			body, bodyReading, bodyChunked, bodyWritten, trailerReading = nil, false, false, 0, false
+			httpMsgEncountered++
+			hrm.scannerWritter.Write(hrm.discardEmpty())
+			continue
 		}
 
 		if bodyReading {
 			eof := false
-			if bytes.Compare(data, eofLine) == 0 && bytes.Compare(body[len(body)-2:], crlf) == 0 {
-				body = body[:len(body)-2] // remove '\r\n'
+			if bytes.Compare(data, eofLine) == 0 && isCRLF(body[len(body)-2:]) {
+				body = body[:len(body)-2] // remove added '\r\n' before eofLine
 				eof = true
 			}
 
-			n, _ := hrm.feedBody(body, chunked)
+			n, _ := hrm.feedBody(body, bodyChunked)
 			bodyWritten += n
 
 			if !eof {
@@ -91,27 +114,27 @@ func (hrm *httpRecordedMessage) feed() {
 				continue
 			}
 
-			if chunked && bodyWritten > 0 {
-				hrm.scannerWritter.Write([]byte{'0', '\r', '\n', '\r', '\n'})
+			if bodyChunked && bodyWritten > 0 { // go seems to ignore body if the first byte is not non-zero number
+				hrm.scannerWritter.Write([]byte{'0', '\r', '\n'})
 			}
-			body, bodyWritten, chunked, bodyReading = nil, 0, false, false
-			data = hrm.discardEmpty()
+			trailerReading = true
+			continue
 		}
 
-		if isChunked(data) {
-			chunked = true
-
-		} else if bytes.Compare(data, crlf) == 0 {
+		switch {
+		case isChunkedEncodingHeader(data):
+			bodyChunked = true
+		case isCRLF(data):
 			bodyReading = true
 		}
-
 		hrm.scannerWritter.Write(data)
 	}
 }
+
 func (hrm *httpRecordedMessage) discardEmpty() []byte {
 	for hrm.scanner.Scan() {
 		data := hrm.scanner.Bytes()
-		if bytes.Compare(crlf, data) == 0 {
+		if isCRLF(data) {
 			continue
 		}
 		return append([]byte(nil), data...)
@@ -139,7 +162,7 @@ func (hrm *httpRecordedMessage) feedBody(body []byte, chunked bool) (n int, err 
 	return
 }
 
-func isChunked(headerline []byte) (chunked bool) {
+func isChunkedEncodingHeader(headerline []byte) (chunked bool) {
 	l := len(transferEncodingHeader)
 	if len(headerline) <= l+1 {
 		return

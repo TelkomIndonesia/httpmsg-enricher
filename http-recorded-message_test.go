@@ -59,6 +59,9 @@ func TestRecordedMessage(t *testing.T) {
 	}{
 		{file: "testdata/record.txt"},
 		{file: "testdata/record1.txt"},
+		{file: "testdata/record2.txt"},
+		{file: "testdata/record3.txt"},
+		{file: "testdata/record4.txt"},
 	}
 
 	for _, tt := range table {
